@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Branch Review Console</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+:root{
+  --bg:#0F1620; --surface:#161F2C; --surface-2:#1E2A3B; --surface-3:#263349;
+  --border:#2B384C; --text:#E8ECF2; --text-dim:#8D99AC; --text-faint:#5C6B80;
+  --gold:#D9A441; --teal:#4FB295; --red:#E2604F; --amber:#E0B54A; --radius:10px;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;background:transparent;color:var(--text);font-family:'IBM Plex Sans',sans-serif;}
+.app{max-width:1040px;margin:0 auto;padding:26px 22px 60px;}
+.masthead{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:1px solid var(--border);padding-bottom:14px;margin-bottom:6px;flex-wrap:wrap;gap:10px;}
+.masthead h1{font-family:'Fraunces',serif;font-weight:600;font-size:24px;margin:0 0 4px;}
+.masthead .sub{color:var(--text-dim);font-size:12.5px;text-transform:uppercase;letter-spacing:0.4px;}
+.who{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--text-dim);}
+.who button{padding:4px 10px;font-size:11px;}
+.active-date{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--gold);}
+.tabs{display:flex;gap:2px;margin:14px 0 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;}
+.tab{padding:10px 16px;cursor:pointer;color:var(--text-dim);font-size:13.5px;font-weight:500;border-bottom:2px solid transparent;user-select:none;}
+.tab:hover{color:var(--text);}
+.tab.active{color:var(--gold);border-bottom-color:var(--gold);}
+.panel{display:none;}
+.panel.active{display:block;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;margin-bottom:16px;}
+.card h2{font-family:'Fraunces',serif;font-size:17px;margin:0 0 12px;font-weight:600;}
+.upload-zone{border:1.5px dashed var(--border);border-radius:var(--radius);padding:34px 20px;text-align:center;}
+.upload-zone.drag{border-color:var(--gold);background:rgba(217,164,65,0.06);}
+.upload-zone p{margin:8px 0 4px;font-size:13.5px;}
+.upload-zone .hint2{font-size:11.5px;color:var(--text-faint);}
+input[type=file]{display:none;}
+button{background:var(--gold);color:#161006;border:none;border-radius:7px;padding:10px 18px;font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit;}
+button:hover{background:#e5b458;}
+button.ghost{background:transparent;border:1px solid var(--border);color:var(--text);}
+button.ghost:hover{background:var(--surface-2);}
+button:disabled{opacity:0.4;cursor:not-allowed;}
+#uploadStatus{font-size:12.5px;color:var(--text-dim);margin-top:12px;line-height:1.6;}
+#uploadStatus.err{color:var(--red);}
+#uploadStatus.ok{color:var(--teal);}
+select,input,textarea{width:100%;background:var(--surface-2);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:9px 11px;font-size:13.5px;font-family:inherit;}
+textarea{resize:vertical;min-height:44px;}
+select:focus,input:focus,textarea:focus{outline:1px solid var(--gold);}
+.top-row{display:flex;gap:12px;margin-bottom:18px;flex-wrap:wrap;}
+.field{flex:1;min-width:200px;}
+.field label{font-size:12px;color:var(--text-dim);display:block;margin-bottom:5px;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+th{text-align:right;font-size:10.5px;text-transform:uppercase;letter-spacing:0.4px;color:var(--text-faint);padding:8px 8px;border-bottom:1px solid var(--border);}
+th:first-child{text-align:left;}
+td{padding:8px 8px;border-bottom:1px solid rgba(43,56,76,0.5);font-family:'IBM Plex Mono',monospace;text-align:right;}
+td:first-child{font-family:'IBM Plex Sans',sans-serif;text-align:left;}
+.badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:10.5px;font-weight:600;font-family:'IBM Plex Sans',sans-serif;}
+.badge.ACHIEVED{background:rgba(79,178,149,0.18);color:var(--teal);}
+.badge.POSITIVE{background:rgba(224,181,74,0.18);color:var(--amber);}
+.badge.NEGATIVE{background:rgba(226,96,79,0.18);color:var(--red);}
+.hint{font-size:11.5px;color:var(--text-faint);margin-top:8px;}
+.empty-hint{font-size:12.5px;color:var(--text-faint);padding:30px 0;text-align:center;}
+.identity{font-size:13px;color:var(--text-dim);margin-bottom:4px;}
+.param-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:14px;}
+.param-card h3{font-family:'Fraunces',serif;font-size:16px;margin:0 0 12px;}
+.current-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border);}
+@media (max-width:640px){
+  .app{padding:16px 14px 40px;}
+  .current-strip{grid-template-columns:repeat(2,1fr);}
+  .masthead{flex-direction:column;align-items:flex-start;}
+  .masthead .active-date{margin-top:2px;}
+  .who{flex-wrap:wrap;}
+  button{padding:11px 16px;min-height:44px;}
+  select,input,textarea{padding:11px 12px;min-height:44px;}
+  textarea{min-height:64px;}
+  .tab{padding:10px 12px;font-size:12.5px;}
+  th,td{padding:7px 6px;font-size:12px;}
+  .top-row .field{min-width:100%;}
+  .btn-row button{flex:1;min-width:120px;}
+  .commit-row select{min-width:100%;}
+  .commit-row .date-wrap{width:100%;}
+  .commit-row .date-wrap input{flex:1;}
+  .gate-card{padding:26px 22px;}
+}
+.current-strip .cell{background:var(--surface-2);border-radius:7px;padding:8px 10px;}
+.current-strip .l{font-size:10px;text-transform:uppercase;color:var(--text-faint);margin-bottom:3px;}
+.current-strip .v{font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:600;}
+.commit-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px;}
+.commit-row select{flex:1;min-width:170px;}
+.commit-row input[type=number]{width:110px;display:none;}
+.commit-row .date-wrap{display:flex;align-items:center;gap:6px;}
+.commit-row .date-wrap label{font-size:12px;color:var(--text-dim);white-space:nowrap;}
+.commit-row .date-wrap input{width:150px;}
+.remarks-wrap label{font-size:11.5px;color:var(--text-faint);display:block;margin-bottom:4px;}
+.preview-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;}
+.preview-card h3{font-family:'Fraunces',serif;font-size:16px;margin:0 0 10px;}
+#previewText{font-size:13px;line-height:1.7;white-space:pre-line;margin:0 0 14px;}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap;}
+.contact-hint{font-size:11.5px;color:var(--text-faint);margin-top:8px;}
+.branch-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-bottom:12px;}
+.branch-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:10px;}
+.branch-head .name{font-family:'Fraunces',serif;font-size:15.5px;font-weight:600;}
+.entered-by{font-size:11px;color:var(--text-faint);}
+.save-status{font-size:11.5px;color:var(--text-faint);margin-top:8px;min-height:16px;}
+.save-status.ok{color:var(--teal);}
+.gate{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:50;}
+.gate-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:32px 30px;max-width:340px;width:100%;}
+.gate-card h2{font-family:'Fraunces',serif;font-size:19px;margin:0 0 6px;}
+.gate-card p{font-size:12.5px;color:var(--text-dim);margin:0 0 18px;}
+.gate-card label{font-size:12px;color:var(--text-dim);display:block;margin:0 0 5px;}
+.gate-card input{margin-bottom:14px;}
+.gate-err{font-size:12px;color:var(--red);min-height:16px;margin-bottom:6px;}
+</style>
+</head>
+<body>
+
+<div class="gate" id="gate">
+  <div class="gate-card">
+    <h2>Branch Review Console</h2>
+    <p>Enter the team password and your name to continue. Both are remembered on this device.</p>
+    <label>Your name</label>
+    <input type="text" id="gateName" placeholder="e.g. Prem Anand R">
+    <label>Team password</label>
+    <input type="password" id="gatePassword" placeholder="Shared RO password">
+    <div class="gate-err" id="gateErr"></div>
+    <button style="width:100%;" onclick="attemptLogin()">Enter</button>
+  </div>
+</div>
+
+<div class="app" id="mainApp" style="display:none;">
+  <div class="masthead">
+    <div>
+      <h1>Branch Review Console</h1>
+      <div class="sub">Upload &middot; Analysis &middot; Review Meeting &middot; Review Report</div>
+    </div>
+    <div style="text-align:right;">
+      <div class="active-date" id="activeDateLabel">No data uploaded yet</div>
+      <div class="who">Signed in as <b id="whoName"></b> <button class="ghost" onclick="signOut()">Switch user</button></div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="home" onclick="switchTab('home')">Home</div>
+    <div class="tab" data-tab="analysis" onclick="switchTab('analysis')">Analysis</div>
+    <div class="tab" data-tab="meeting" onclick="switchTab('meeting')">Review Meeting</div>
+    <div class="tab" data-tab="report" onclick="switchTab('report')">Review Report</div>
+  </div>
+
+  <!-- HOME / UPLOAD -->
+  <div class="panel active" id="panel-home">
+    <div class="card">
+      <h2>Upload today's SB / CD / RTD workbook</h2>
+      <div class="upload-zone" id="dropZone">
+        <p>Drop the daily Excel file here, or</p>
+        <button onclick="document.getElementById('fileInput').click()">Choose file</button>
+        <input type="file" id="fileInput" accept=".xlsx,.xls" onchange="handleFileUpload(event)">
+        <p class="hint2">Expected columns: Region Name, Branch Name, Branch Code, Period, Savings Bank, Current Deposits, Term Deposits &hellip;</p>
+      </div>
+      <div id="uploadStatus"></div>
+    </div>
+    <div class="card">
+      <h2>Previously uploaded days</h2>
+      <div id="uploadedDatesList" class="hint">Loading&hellip;</div>
+    </div>
+  </div>
+
+  <!-- ANALYSIS -->
+  <div class="panel" id="panel-analysis">
+    <div class="top-row">
+      <div class="field"><label>Date</label><select id="analysisDateSel" onchange="onAnalysisDateChange()"></select></div>
+      <div class="field"><label>Branch</label><select id="analysisBranchSel" onchange="renderAnalysis()"></select></div>
+    </div>
+    <div id="analysisContent"><div class="empty-hint">Upload a file on the Home page to see analysis.</div></div>
+  </div>
+
+  <!-- REVIEW MEETING -->
+  <div class="panel" id="panel-meeting">
+    <div class="top-row">
+      <div class="field"><label>Branch</label><select id="branchSel" onchange="loadBranch()"></select></div>
+      <div class="field"><label>Meeting date</label><input type="date" id="meetingDate" value="2026-08-17" onchange="loadBranch()"></div>
+    </div>
+    <div id="meetingContent"><div class="empty-hint">Upload data on Home first, then select a branch here.</div></div>
+  </div>
+
+  <!-- REVIEW REPORT -->
+  <div class="panel" id="panel-report">
+    <div class="top-row">
+      <div class="field"><label>Meeting</label><select id="reportMeetingSel" onchange="renderReport()"></select></div>
+    </div>
+    <div id="reportContent"><div class="empty-hint">Loading saved meetings&hellip;</div></div>
+  </div>
+</div>
+
+<script>
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyom_CSEFVjakoJU7ne-H_yPU8GIChj3NNFLZX7PTuun8Tu8EUA1Nlrie1BxaUcfkyw4w/exec";
+const STATIC = [{"code": 972, "name": "Adiyakkamangalam", "phone": "9940527787", "email": "iob972@iob.in", "SB": {"opening": 30.69, "target": 32.15}, "CD": {"opening": 0.32, "target": 0.36}, "RTD": {"opening": 16.83, "target": 17.66}, "manager_name": "Mahiban A"}, {"code": 1562, "name": "Agarapodakudi", "phone": "9047738554", "email": "iob1562@iob.in", "SB": {"opening": 36.71, "target": 38.72}, "CD": {"opening": 1.46, "target": 1.55}, "RTD": {"opening": 35.07, "target": 37.08}, "manager_name": "M Divya Bharathi"}, {"code": 228, "name": "Akkur", "phone": "9566011036", "email": "iob228@iob.in", "SB": {"opening": 47.68, "target": 50.11}, "CD": {"opening": 1.51, "target": 1.69}, "RTD": {"opening": 36.83, "target": 38.8}, "manager_name": "Nishanth K N"}, {"code": 533, "name": "Athikadai", "phone": "9962230621", "email": "iob533@iob.in", "SB": {"opening": 36.65, "target": 38.38}, "CD": {"opening": 0.28, "target": 0.32}, "RTD": {"opening": 48.1, "target": 50.66}, "manager_name": "Rajasekaran M"}, {"code": 2795, "name": "Avoor", "phone": "9887063361", "email": "iob2795@iob.in", "SB": {"opening": 24.8, "target": 25.89}, "CD": {"opening": 0.26, "target": 0.3}, "RTD": {"opening": 8.03, "target": 8.46}, "manager_name": "Arvind Sharma"}, {"code": 1076, "name": "Ayyakaranpulam", "phone": "9916256314", "email": "iob1076@iob.in", "SB": {"opening": 43.34, "target": 45.56}, "CD": {"opening": 1.75, "target": 1.81}, "RTD": {"opening": 17.77, "target": 18.72}, "manager_name": "Avadhesh Kumar Agyat"}, {"code": 3863, "name": "District Collectorate - Mayiladuthurai", "phone": "9677314507", "email": "iob3863@iob.in", "SB": {"opening": 10.63, "target": 11.21}, "CD": {"opening": 0.2, "target": 0.23}, "RTD": {"opening": 1.11, "target": 1.17}, "manager_name": "Senthil Kumar S G"}, {"code": 2404, "name": "District Court - Nagapattinam", "phone": "9952328955", "email": "iob2404@iob.in", "SB": {"opening": 15.16, "target": 15.99}, "CD": {"opening": 7.28, "target": 7.64}, "RTD": {"opening": 26.45, "target": 27.96}, "manager_name": "Karthick T"}, {"code": 1092, "name": "Edamelaiyur", "phone": "9965512512", "email": "iob1092@iob.in", "SB": {"opening": 25.34, "target": 26.73}, "CD": {"opening": 0.72, "target": 0.76}, "RTD": {"opening": 12.25, "target": 12.96}, "manager_name": "Pabitha S"}, {"code": 1260, "name": "Elanthangudi", "phone": "9946478199", "email": "iob1260@iob.in", "SB": {"opening": 33.03, "target": 35.2}, "CD": {"opening": 1.25, "target": 1.34}, "RTD": {"opening": 20.99, "target": 22.43}, "manager_name": "Anand C T"}, {"code": 2798, "name": "Elavangargudi", "phone": "9080646525", "email": "iob2798@iob.in", "SB": {"opening": 18.97, "target": 20.35}, "CD": {"opening": 0.86, "target": 0.97}, "RTD": {"opening": 12.34, "target": 13.28}, "manager_name": "Sudharsan S"}, {"code": 610, "name": "Enengudi", "phone": "8778156655", "email": "iob610@iob.in", "SB": {"opening": 36.71, "target": 38.99}, "CD": {"opening": 0.36, "target": 0.42}, "RTD": {"opening": 19.72, "target": 20.99}, "manager_name": "Karthikeyan V"}, {"code": 1049, "name": "Kankalancheri", "phone": "8789118164", "email": "iob1049@iob.in", "SB": {"opening": 23.34, "target": 24.62}, "CD": {"opening": 0.43, "target": 0.47}, "RTD": {"opening": 13.18, "target": 13.93}, "manager_name": "Rohit Kumar"}, {"code": 1270, "name": "Kattimedu (Kattimodu)", "phone": "8754266116", "email": "iob1270@iob.in", "SB": {"opening": 19.23, "target": 19.94}, "CD": {"opening": 0.31, "target": 0.35}, "RTD": {"opening": 15.83, "target": 16.43}, "manager_name": "Palanikumar R"}, {"code": 279, "name": "Kaverippoompattinam", "phone": "8778156655", "email": "iob279@iob.in", "SB": {"opening": 38.7, "target": 41.1}, "CD": {"opening": 1.43, "target": 1.52}, "RTD": {"opening": 18.03, "target": 19.2}, "manager_name": "Karthikeyan M"}, {"code": 3913, "name": "Keelaiyur", "phone": "9524842497", "email": "iob3913@iob.in", "SB": {"opening": 3.99, "target": 4.35}, "CD": {"opening": 0.16, "target": 0.18}, "RTD": {"opening": 0.57, "target": 0.61}, "manager_name": "Ajeeth Kanth"}, {"code": 795, "name": "Kiliyanur", "phone": "7598286462", "email": "iob795@iob.in", "SB": {"opening": 31.48, "target": 33.2}, "CD": {"opening": 1.24, "target": 1.29}, "RTD": {"opening": 15.41, "target": 16.29}, "manager_name": "Raghavendran N"}, {"code": 3970, "name": "Kodavasal", "phone": "9940261834", "email": "iob3970@iob.in", "SB": {"opening": 2.71, "target": 3.11}, "CD": {"opening": 0.08, "target": 0.16}, "RTD": {"opening": 0.32, "target": 0.37}, "manager_name": "Kannan Muthukannu"}, {"code": 1645, "name": "Kodikkalpalayam", "phone": "8522966924", "email": "iob1645@iob.in", "SB": {"opening": 33.75, "target": 35.6}, "CD": {"opening": 0.39, "target": 0.5}, "RTD": {"opening": 20.01, "target": 21.16}, "manager_name": "Eswara Naga Kiran Boda"}, {"code": 2797, "name": "Kodimangalam", "phone": "9566799509", "email": "iob2797@iob.in", "SB": {"opening": 14.31, "target": 14.94}, "CD": {"opening": 0.63, "target": 0.67}, "RTD": {"opening": 6.19, "target": 6.48}, "manager_name": "Prithiviraj Selvaraj"}, {"code": 39, "name": "Koothanallur", "phone": "9003850808", "email": "iob39@iob.in", "SB": {"opening": 61.68, "target": 66.18}, "CD": {"opening": 1.89, "target": 2.03}, "RTD": {"opening": 55.45, "target": 59.67}, "manager_name": "Yogeshwari D"}, {"code": 3547, "name": "Koothanallur - Lakshmangudi", "phone": "9629223895", "email": "iob3547@iob.in", "SB": {"opening": 12.14, "target": 13.03}, "CD": {"opening": 0.89, "target": 1.03}, "RTD": {"opening": 7.63, "target": 8.21}, "manager_name": "Bhuvaneswari"}, {"code": 1214, "name": "Kulikkarai", "phone": "8174887712", "email": "iob1214@iob.in", "SB": {"opening": 16.33, "target": 17.04}, "CD": {"opening": 0.75, "target": 0.79}, "RTD": {"opening": 15.52, "target": 16.22}, "manager_name": "Abhai Vikram Singh"}, {"code": 45, "name": "Kuttalam", "phone": "9095453190", "email": "iob45@iob.in", "SB": {"opening": 52.06, "target": 54.91}, "CD": {"opening": 0.92, "target": 1.03}, "RTD": {"opening": 43.48, "target": 45.96}, "manager_name": "Anubama K"}, {"code": 229, "name": "Manalmedu", "phone": "9003417847", "email": "iob229@iob.in", "SB": {"opening": 34.88, "target": 36.15}, "CD": {"opening": 1.46, "target": 1.52}, "RTD": {"opening": 18.8, "target": 19.52}, "manager_name": "L Gokulnath"}, {"code": 952, "name": "Manavalanallur", "phone": "9555750889", "email": "iob952@iob.in", "SB": {"opening": 47.15, "target": 49.73}, "CD": {"opening": 0.57, "target": 0.66}, "RTD": {"opening": 22.98, "target": 24.29}, "manager_name": "Uttam Lakra"}, {"code": 896, "name": "Mannargudi", "phone": "7416624430", "email": "iob896@iob.in", "SB": {"opening": 90.79, "target": 97.42}, "CD": {"opening": 1.66, "target": 1.93}, "RTD": {"opening": 65.17, "target": 71.38}, "manager_name": "Varagani Anil Babu"}, {"code": 57, "name": "Mayiladuthurai", "phone": "9677019725", "email": "iob57@iob.in", "SB": {"opening": 107.07, "target": 115.27}, "CD": {"opening": 1.76, "target": 2.78}, "RTD": {"opening": 134.31, "target": 147.11}, "manager_name": "Ganesan A"}, {"code": 1226, "name": "Muthupet (Idumbavanam)", "phone": "8090447554", "email": "iob1226@iob.in", "SB": {"opening": 45.46, "target": 48.11}, "CD": {"opening": 1.38, "target": 1.52}, "RTD": {"opening": 20.23, "target": 21.46}, "manager_name": "Ashish Kumar Kanaujia"}, {"code": 62, "name": "Nagapattinam", "phone": "8098891568", "email": "iob62@iob.in", "SB": {"opening": 116.58, "target": 123.19}, "CD": {"opening": 3.95, "target": 4.85}, "RTD": {"opening": 87.12, "target": 93.76}, "manager_name": "Saravanan T"}, {"code": 3837, "name": "Nagapattinam Medical College", "phone": "8072553940", "email": "iob3837@iob.in", "SB": {"opening": 8.62, "target": 9.24}, "CD": {"opening": 0.18, "target": 0.2}, "RTD": {"opening": 0.24, "target": 0.26}, "manager_name": "Ananda Priya Tr"}, {"code": 706, "name": "Nagore", "phone": "8939595831", "email": "iob706@iob.in", "SB": {"opening": 44.45, "target": 46.88}, "CD": {"opening": 1.26, "target": 1.37}, "RTD": {"opening": 17.7, "target": 18.71}, "manager_name": "S Sundararaman"}, {"code": 1862, "name": "Nannilam", "phone": "9600466586", "email": "iob1862@iob.in", "SB": {"opening": 19.72, "target": 20.8}, "CD": {"opening": 0.52, "target": 0.66}, "RTD": {"opening": 12.19, "target": 12.89}, "manager_name": "Aruloli K"}, {"code": 557, "name": "Nidur", "phone": "8610944287", "email": "iob557@iob.in", "SB": {"opening": 45.81, "target": 48.66}, "CD": {"opening": 0.27, "target": 0.34}, "RTD": {"opening": 22.97, "target": 24.46}, "manager_name": "Natarajan"}, {"code": 2858, "name": "Nilakkudi", "phone": "9461775625", "email": "iob2858@iob.in", "SB": {"opening": 11.13, "target": 11.74}, "CD": {"opening": 1.03, "target": 1.14}, "RTD": {"opening": 10.68, "target": 11.29}, "manager_name": "Suresh Kumar Meena"}, {"code": 1269, "name": "Pakkam - Kottur", "phone": "9965757009", "email": "iob1269@iob.in", "SB": {"opening": 21.66, "target": 22.84}, "CD": {"opening": 0.07, "target": 0.09}, "RTD": {"opening": 10.4, "target": 11.0}, "manager_name": "Prithvi Rajan"}, {"code": 272, "name": "Poonthottam", "phone": "9790845820", "email": "iob272@iob.in", "SB": {"opening": 36.31, "target": 38.3}, "CD": {"opening": 1.42, "target": 1.51}, "RTD": {"opening": 21.52, "target": 22.75}, "manager_name": "Jeyapraba R"}, {"code": 988, "name": "Punganur", "phone": "9442397716", "email": "iob988@iob.in", "SB": {"opening": 11.39, "target": 11.81}, "CD": {"opening": 0.05, "target": 0.07}, "RTD": {"opening": 10.17, "target": 10.56}, "manager_name": "Manimohan M"}, {"code": 523, "name": "Sankaranpandal", "phone": "9952298915", "email": "iob523@iob.in", "SB": {"opening": 39.06, "target": 40.91}, "CD": {"opening": 0.67, "target": 0.7}, "RTD": {"opening": 37.59, "target": 39.6}, "manager_name": "Arun Prasath A"}, {"code": 2334, "name": "Sembanarkoil", "phone": "9003125991", "email": "iob2334@iob.in", "SB": {"opening": 29.09, "target": 30.68}, "CD": {"opening": 1.28, "target": 1.39}, "RTD": {"opening": 27.47, "target": 29.04}, "manager_name": "Raghuram B V"}, {"code": 238, "name": "Sikkal", "phone": "7007717289", "email": "iob238@iob.in", "SB": {"opening": 25.94, "target": 27.08}, "CD": {"opening": 0.4, "target": 0.43}, "RTD": {"opening": 20.41, "target": 21.34}, "manager_name": "Anil Kumar Maurya"}, {"code": 83, "name": "Sirkali", "phone": "9884112719", "email": "iob83@iob.in", "SB": {"opening": 63.26, "target": 67.41}, "CD": {"opening": 1.94, "target": 2.09}, "RTD": {"opening": 41.76, "target": 44.63}, "manager_name": "Robinson S"}, {"code": 963, "name": "Specialised Sme - Mayiladuthurai Junction", "phone": "9941857585", "email": "iob963@iob.in", "SB": {"opening": 54.75, "target": 58.75}, "CD": {"opening": 2.58, "target": 2.95}, "RTD": {"opening": 53.83, "target": 57.93}, "manager_name": "Remya P"}, {"code": 2266, "name": "Thandalai", "phone": "7077609571", "email": "iob2266@iob.in", "SB": {"opening": 25.39, "target": 26.78}, "CD": {"opening": 0.85, "target": 0.94}, "RTD": {"opening": 18.12, "target": 19.16}, "manager_name": "Srikanta Meher"}, {"code": 2830, "name": "Tharangambadi - Poraiyar", "phone": "8072990772", "email": "iob2830@iob.in", "SB": {"opening": 30.14, "target": 31.79}, "CD": {"opening": 1.06, "target": 1.13}, "RTD": {"opening": 18.96, "target": 20.04}, "manager_name": "Divya"}, {"code": 2832, "name": "Thenmangalam - Azhiyur", "phone": "8840896518", "email": "iob2832@iob.in", "SB": {"opening": 14.95, "target": 15.61}, "CD": {"opening": 0.51, "target": 0.54}, "RTD": {"opening": 6.73, "target": 7.04}, "manager_name": "Prasoon Srivastava"}, {"code": 591, "name": "Therrzhundur", "phone": "9048484015", "email": "iob591@iob.in", "SB": {"opening": 47.05, "target": 49.28}, "CD": {"opening": 0.82, "target": 0.88}, "RTD": {"opening": 43.58, "target": 45.74}, "manager_name": "Ratheesh Raveendran Nair"}, {"code": 1365, "name": "Thillaivilakam", "phone": "8248579417", "email": "iob1365@iob.in", "SB": {"opening": 16.77, "target": 17.38}, "CD": {"opening": 0.14, "target": 0.16}, "RTD": {"opening": 8.33, "target": 8.65}, "manager_name": "Vikram Lakshmanan"}, {"code": 1041, "name": "Thirukalacheri", "phone": "8953010079", "email": "iob1041@iob.in", "SB": {"opening": 41.78, "target": 44.07}, "CD": {"opening": 0.7, "target": 0.75}, "RTD": {"opening": 20.45, "target": 21.62}, "manager_name": "Prabhat Verma"}, {"code": 2833, "name": "Thirumailadi - Kollidam", "phone": "9230433449", "email": "iob2833@iob.in", "SB": {"opening": 35.48, "target": 38.07}, "CD": {"opening": 0.93, "target": 1.04}, "RTD": {"opening": 20.04, "target": 21.56}, "manager_name": "Somnath Mukhuty"}, {"code": 3255, "name": "Thirumakkottai", "phone": "9867478763", "email": "iob3255@iob.in", "SB": {"opening": 23.08, "target": 24.09}, "CD": {"opening": 0.92, "target": 0.95}, "RTD": {"opening": 13.2, "target": 13.8}, "manager_name": "Vuggina Rupesh Charwak"}, {"code": 224, "name": "Thirumullaivasal", "phone": "8438344756", "email": "iob224@iob.in", "SB": {"opening": 38.06, "target": 39.86}, "CD": {"opening": 1.51, "target": 1.58}, "RTD": {"opening": 15.46, "target": 16.22}, "manager_name": "Praveenkumar A S P"}, {"code": 894, "name": "Thiruthuraipoondi", "phone": "8305674777", "email": "iob894@iob.in", "SB": {"opening": 59.09, "target": 62.76}, "CD": {"opening": 2.31, "target": 2.49}, "RTD": {"opening": 22.99, "target": 24.48}, "manager_name": "Vikas Singh"}, {"code": 750, "name": "Thiruvavaduthurai", "phone": "8870257521", "email": "iob750@iob.in", "SB": {"opening": 40.8, "target": 42.74}, "CD": {"opening": 0.38, "target": 0.42}, "RTD": {"opening": 39.03, "target": 40.97}, "manager_name": "Renuga J"}, {"code": 2580, "name": "Thittacherry", "phone": "9659889826", "email": "iob2580@iob.in", "SB": {"opening": 25.18, "target": 26.28}, "CD": {"opening": 0.48, "target": 0.54}, "RTD": {"opening": 13.56, "target": 14.18}, "manager_name": "Arangovalan S"}, {"code": 618, "name": "Thopputhurai", "phone": "9841201454", "email": "iob618@iob.in", "SB": {"opening": 46.95, "target": 49.52}, "CD": {"opening": 2.12, "target": 2.23}, "RTD": {"opening": 27.35, "target": 28.91}, "manager_name": "Maria Doss"}, {"code": 97, "name": "Thrivaroor", "phone": "9943444642", "email": "iob97@iob.in", "SB": {"opening": 83.16, "target": 90.75}, "CD": {"opening": 3.93, "target": 4.99}, "RTD": {"opening": 92.4, "target": 101.2}, "manager_name": "Venkateswaran E"}, {"code": 2883, "name": "Tiruvarur - Vilamal", "phone": "8123456197", "email": "iob2883@iob.in", "SB": {"opening": 18.71, "target": 19.74}, "CD": {"opening": 0.78, "target": 0.92}, "RTD": {"opening": 12.18, "target": 12.87}, "manager_name": "Devarajan"}, {"code": 2796, "name": "Ullikottai", "phone": "6381558746", "email": "iob2796@iob.in", "SB": {"opening": 40.0, "target": 42.34}, "CD": {"opening": 1.74, "target": 1.85}, "RTD": {"opening": 28.59, "target": 30.33}, "manager_name": "Anbalagan N"}, {"code": 601, "name": "Vadagarai", "phone": "9445295009", "email": "iob601@iob.in", "SB": {"opening": 36.97, "target": 38.99}, "CD": {"opening": 0.56, "target": 0.6}, "RTD": {"opening": 21.81, "target": 23.06}, "manager_name": "R Prabhakaran"}, {"code": 206, "name": "Vaitheeswaranloil", "phone": "9444795012", "email": "iob206@iob.in", "SB": {"opening": 34.69, "target": 36.21}, "CD": {"opening": 1.84, "target": 1.91}, "RTD": {"opening": 122.65, "target": 128.26}, "manager_name": "Krishnan N"}, {"code": 1197, "name": "Valangaiman (Haridwaramangalam)", "phone": "7708517921", "email": "iob1197@iob.in", "SB": {"opening": 67.8, "target": 71.51}, "CD": {"opening": 3.02, "target": 3.2}, "RTD": {"opening": 24.38, "target": 25.77}, "manager_name": "Veeramani K"}, {"code": 2831, "name": "Vanduvancheri - Thulasiyapattinam", "phone": "6383174981", "email": "iob2831@iob.in", "SB": {"opening": 22.56, "target": 23.55}, "CD": {"opening": 0.96, "target": 0.98}, "RTD": {"opening": 10.53, "target": 11.01}, "manager_name": "Abarajeetha"}, {"code": 244, "name": "Velankanni", "phone": "9952744509", "email": "iob244@iob.in", "SB": {"opening": 42.35, "target": 45.44}, "CD": {"opening": 4.45, "target": 5.18}, "RTD": {"opening": 53.9, "target": 58.01}, "manager_name": "Thirumal T"}, {"code": 1232, "name": "Vilundamavadi", "phone": "9952999291", "email": "iob1232@iob.in", "SB": {"opening": 29.31, "target": 30.59}, "CD": {"opening": 0.47, "target": 0.53}, "RTD": {"opening": 8.78, "target": 9.18}, "manager_name": "Senthil Kumar P"}];
+const PARAMS = [['SB','Savings Bank'],['CD','CDCC (Current Deposits)'],['RTD','Term Deposits']];
+const TYPE_LABEL = {positive:'positive growth', budget:'achieve budget', custom:'custom commitment'};
+let CURRENT = {};
+let ACTIVE_DATE = null;
+
+// ---------- BACKEND CALL ----------
+async function callBackend(action, payload){
+  payload = payload || {};
+  const pw = localStorage.getItem('rc_password');
+  const body = JSON.stringify(Object.assign({password: pw, action: action}, payload));
+  const res = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: body });
+  const json = await res.json();
+  if(json.error) throw new Error(json.error);
+  return json.result;
+}
+
+// ---------- LOGIN GATE ----------
+async function attemptLogin(){
+  const name = document.getElementById('gateName').value.trim();
+  const pw = document.getElementById('gatePassword').value;
+  const errEl = document.getElementById('gateErr');
+  if(!name || !pw){ errEl.textContent = 'Enter both your name and the password.'; return; }
+  localStorage.setItem('rc_password', pw);
+  errEl.textContent = 'Checking…';
+  try{
+    await callBackend('listSnapshotDates', {});
+    localStorage.setItem('rc_name', name);
+    enterApp();
+  }catch(e){
+    errEl.textContent = 'Incorrect password — check with your team.';
+    localStorage.removeItem('rc_password');
+  }
+}
+function signOut(){
+  localStorage.removeItem('rc_password');
+  localStorage.removeItem('rc_name');
+  document.getElementById('mainApp').style.display = 'none';
+  document.getElementById('gate').style.display = 'flex';
+}
+function enterApp(){
+  document.getElementById('gate').style.display = 'none';
+  document.getElementById('mainApp').style.display = '';
+  document.getElementById('whoName').textContent = localStorage.getItem('rc_name');
+  initApp();
+}
+
+function money(v){ return (v===null||v===undefined) ? "—" : v.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function round2(v){ return Math.round(v*100)/100; }
+function fmtPeriod(p){ if(!p||p.length!==8) return p; return `${p.slice(6,8)}.${p.slice(4,6)}.${p.slice(0,4)}`; }
+function fmtDate(iso){ return new Date(iso+'T00:00:00').toLocaleDateString('en-IN',{day:'numeric',month:'short'}); }
+
+async function switchTab(name){
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+  ['home','analysis','meeting','report'].forEach(n => document.getElementById('panel-'+n).classList.toggle('active', n===name));
+  if(name === 'home') refreshUploadedDatesList();
+  if(name === 'analysis'){ await populateAnalysisDates(); renderAnalysis(); }
+  if(name === 'report'){ await populateReportMeetings(); renderReport(); }
+}
+
+// ---------- PARSE + STORE DAILY UPLOAD ----------
+function parseWorkbook(arrayBuffer){
+  const wb = XLSX.read(arrayBuffer, {type:'array'});
+  const sheet = wb.Sheets[wb.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(sheet, {header:1, raw:true});
+  let headerIdx = -1, headerRow = null;
+  for(let i=0;i<rows.length;i++){
+    if(rows[i] && rows[i].includes('Branch Code')){ headerIdx = i; headerRow = rows[i]; break; }
+  }
+  if(headerIdx === -1) throw new Error('Could not find a header row containing "Branch Code" — is this the right file?');
+  const col = name => headerRow.indexOf(name);
+  const cCode = col('Branch Code'), cSB = col('Savings Bank'), cCD = col('Current Deposits'),
+        cRTD = col('Term Deposits'), cPeriod = col('Period'), cRegion = col('Region Name');
+  if([cCode,cSB,cCD,cRTD].some(c => c === -1)) throw new Error('Missing an expected column.');
+  const data = {}; let period = null;
+  for(let i=headerIdx+1;i<rows.length;i++){
+    const r = rows[i];
+    if(!r || r[cRegion] === 'Grand Total' || r[cCode]===undefined || r[cCode]===null || r[cCode]==='') continue;
+    const code = parseInt(r[cCode]);
+    if(isNaN(code)) continue;
+    if(cPeriod !== -1) period = r[cPeriod];
+    data[code] = { SB: r[cSB], CD: r[cCD], RTD: r[cRTD] };
+  }
+  return { period: String(period), data };
+}
+
+async function handleFileUpload(evt){
+  const file = evt.target.files[0];
+  if(!file) return;
+  const statusEl = document.getElementById('uploadStatus');
+  statusEl.className = ''; statusEl.textContent = 'Reading file…';
+  try{
+    const buf = await file.arrayBuffer();
+    const {period, data} = parseWorkbook(buf);
+    const codes = Object.keys(data).map(Number);
+    const matched = codes.filter(c => STATIC.some(b=>b.code===c));
+    const unmatched = codes.filter(c => !STATIC.some(b=>b.code===c));
+    const missingFromFile = STATIC.filter(b => !codes.includes(b.code));
+
+    statusEl.textContent = 'Saving to shared sheet…';
+    await callBackend('saveSnapshot', {period, data, enteredBy: localStorage.getItem('rc_name')});
+
+    statusEl.className = 'ok';
+    let msg = `Parsed ${codes.length} branch rows for ${fmtPeriod(period)}, saved to the shared sheet. Matched ${matched.length} of ${STATIC.length} known branches.`;
+    if(unmatched.length) msg += `<br>Unrecognised branch codes in file: ${unmatched.join(', ')}`;
+    if(missingFromFile.length) msg += `<br>Known branches missing from this file: ${missingFromFile.map(b=>b.name).join(', ')}`;
+    statusEl.innerHTML = msg;
+
+    await setActiveDate(period);
+    await refreshUploadedDatesList();
+    await populateAnalysisDates();
+  }catch(e){
+    statusEl.className = 'err';
+    statusEl.textContent = 'Could not save this file: ' + e.message;
+  }
+  evt.target.value = '';
+}
+
+async function listUploadedDates(){
+  try{ return await callBackend('listSnapshotDates', {}); }catch(e){ return []; }
+}
+async function refreshUploadedDatesList(){
+  const dates = await listUploadedDates();
+  document.getElementById('uploadedDatesList').innerHTML = dates.length ? dates.map(fmtPeriod).join(' &middot; ') : 'None yet.';
+}
+
+async function setActiveDate(period){
+  let dailyData = {};
+  try{ dailyData = await callBackend('getSnapshot', {period}); }catch(e){ dailyData = {}; }
+  CURRENT = {};
+  STATIC.forEach(b => {
+    const d = dailyData[b.code];
+    const built = {name:b.name, code:b.code, phone:b.phone, email:b.email};
+    ['SB','CD','RTD'].forEach(p=>{
+      const opening = b[p].opening, target = b[p].target;
+      const current = (d && d[p] != null) ? d[p] : null;
+      let gap=null, growth=null, status=null;
+      if(current !== null){
+        gap = round2(current-target); growth = round2(current-opening);
+        status = gap >= 0 ? 'ACHIEVED' : (growth >= 0 ? 'POSITIVE' : 'NEGATIVE');
+      }
+      built[p] = {opening,target,current,gap,growth,status};
+    });
+    CURRENT[b.code] = built;
+  });
+  ACTIVE_DATE = period;
+  document.getElementById('activeDateLabel').textContent = `Data as on ${fmtPeriod(period)}`;
+}
+
+// ---------- ANALYSIS TAB ----------
+async function populateAnalysisDates(){
+  const dates = await listUploadedDates();
+  const sel = document.getElementById('analysisDateSel');
+  sel.innerHTML = dates.length ? dates.map(d => `<option value="${d}">${fmtPeriod(d)}</option>`).join('') : '<option value="">No data uploaded</option>';
+  if(dates.length){
+    sel.value = ACTIVE_DATE && dates.includes(ACTIVE_DATE) ? ACTIVE_DATE : dates[0];
+    if(!ACTIVE_DATE || ACTIVE_DATE !== sel.value) await setActiveDate(sel.value);
+  }
+  populateAnalysisBranchSelect();
+}
+function populateAnalysisBranchSelect(){
+  const sel = document.getElementById('analysisBranchSel');
+  sel.innerHTML = '<option value="">All branches (Region)</option>' + STATIC.map(b => `<option value="${b.code}">${b.name} (${b.code})</option>`).join('');
+}
+async function onAnalysisDateChange(){
+  const period = document.getElementById('analysisDateSel').value;
+  if(period) await setActiveDate(period);
+  renderAnalysis();
+}
+function regionTotals(param){
+  let o=0,t=0,c=0;
+  Object.values(CURRENT).forEach(b => { if(b[param].current!==null){ o+=b[param].opening; t+=b[param].target; c+=b[param].current; } });
+  return {opening:o,target:t,current:c,gap:round2(c-t),growth:round2(c-o)};
+}
+function statusCounts(param){
+  const counts = {POSITIVE:0,NEGATIVE:0,ACHIEVED:0};
+  Object.values(CURRENT).forEach(b => { if(b[param].status) counts[b[param].status]++; });
+  return counts;
+}
+function renderAnalysis(){
+  const content = document.getElementById('analysisContent');
+  if(!ACTIVE_DATE){ content.innerHTML = '<div class="empty-hint">Upload a file on the Home page to see analysis.</div>'; return; }
+  const branchCode = document.getElementById('analysisBranchSel').value;
+  if(!branchCode){
+    const params = [['SB','Savings Bank'],['CD','Current Deposits'],['RTD','Term Deposits']];
+    const kbpRows = params.map(([k,label])=>{
+      const t = regionTotals(k);
+      return `<tr><td>${label}</td><td>${money(t.opening)}</td><td>${money(t.current)}</td><td>${money(t.target)}</td>
+        <td style="color:${t.gap>=0?'var(--teal)':'var(--red)'};">${money(t.gap)}</td>
+        <td style="color:${t.growth>=0?'var(--teal)':'var(--red)'};">${money(t.growth)}</td></tr>`;
+    }).join('');
+    const countRows = params.map(([k,label])=>{
+      const c = statusCounts(k); const total = c.POSITIVE+c.NEGATIVE+c.ACHIEVED;
+      return `<tr><td>${label}</td><td>${c.POSITIVE}</td><td>${c.NEGATIVE}</td><td>${c.ACHIEVED}</td><td>${total}</td><td>${total?Math.round(100*c.NEGATIVE/total):0}%</td></tr>`;
+    }).join('');
+    const worst = Object.values(CURRENT).filter(b => b.SB.status==='NEGATIVE' && b.CD.status==='NEGATIVE' && b.RTD.status==='NEGATIVE').map(b=>b.name);
+    content.innerHTML = `
+    <div class="card"><h2>Region — Key Business Parameters (${fmtPeriod(ACTIVE_DATE)})</h2>
+      <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;"><table><thead><tr><th>Parameter</th><th>31.03.26</th><th>Current</th><th>Target Aug'26</th><th>Gap</th><th>Growth over Mar</th></tr></thead><tbody>${kbpRows}</tbody></table></div></div>
+    <div class="card"><h2>Branch status distribution</h2>
+      <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;"><table><thead><tr><th>Parameter</th><th>Positive</th><th>Negative</th><th>Achieved</th><th>Total</th><th>% Negative</th></tr></thead><tbody>${countRows}</tbody></table></div></div>
+    <div class="card"><h2>Watchlist — negative on all three parameters</h2><div style="font-size:13px;">${worst.length ? worst.join(', ') : 'None.'}</div></div>`;
+  } else {
+    const b = CURRENT[branchCode];
+    const params = [['SB','Savings Bank'],['CD','Current Deposits'],['RTD','Term Deposits']];
+    const rows = params.map(([k,label])=>{
+      const d = b[k];
+      return `<tr><td>${label}</td><td>${money(d.opening)}</td><td>${money(d.current)}</td><td>${money(d.target)}</td>
+        <td style="color:${d.gap>=0?'var(--teal)':'var(--red)'};">${money(d.gap)}</td>
+        <td style="color:${d.growth>=0?'var(--teal)':'var(--red)'};">${money(d.growth)}</td>
+        <td style="text-align:center;"><span class="badge ${d.status}">${d.status}</span></td></tr>`;
+    }).join('');
+    content.innerHTML = `<div class="card"><div class="identity">${b.name} &middot; Branch code ${b.code}</div>
+      <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;"><table><thead><tr><th>Parameter</th><th>31.03.26</th><th>Current</th><th>Target Aug'26</th><th>Gap</th><th>Growth over Mar</th><th style="text-align:center;">Status</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+  }
+}
+
+// ---------- REVIEW MEETING TAB ----------
+function populateBranchSelect(){
+  const sel = document.getElementById('branchSel');
+  sel.innerHTML = '<option value="">Select a branch…</option>' + STATIC.map(b => `<option value="${b.code}">${b.name} (${b.code})</option>`).join('');
+}
+async function loadBranch(){
+  const code = document.getElementById('branchSel').value;
+  const meetingDate = document.getElementById('meetingDate').value;
+  const content = document.getElementById('meetingContent');
+  if(!code){ content.innerHTML = '<div class="empty-hint">Select a branch to begin the review.</div>'; return; }
+  if(!ACTIVE_DATE){ content.innerHTML = '<div class="empty-hint">Upload data on the Home page first.</div>'; return; }
+  content.innerHTML = '<div class="empty-hint">Loading…</div>';
+  const b = CURRENT[code];
+  const staticB = STATIC.find(x=>x.code==code);
+  let saved = null;
+  try{ saved = await callBackend('getCommitment', {meetingDate, branchCode: code}); }catch(e){ saved = null; }
+
+  let html = '';
+  PARAMS.forEach(([key,label])=>{
+    const d = b[key];
+    const s = saved && saved[key] ? saved[key] : {};
+    html += `
+    <div class="param-card">
+      <h3>${label}</h3>
+      <div class="current-strip">
+        <div class="cell"><div class="l">31.03.26</div><div class="v">${money(d.opening)}</div></div>
+        <div class="cell"><div class="l">As on ${fmtPeriod(ACTIVE_DATE)}</div><div class="v">${money(d.current)}</div></div>
+        <div class="cell"><div class="l">Target Aug'26</div><div class="v">${money(d.target)}</div></div>
+        <div class="cell"><div class="l">Gap</div><div class="v" style="color:${d.gap>=0?'var(--teal)':'var(--red)'};">${money(d.gap)}</div></div>
+        <div class="cell"><div class="l">Status</div><div class="v">${d.status?`<span class="badge ${d.status}">${d.status}</span>`:'—'}</div></div>
+      </div>
+      <div class="commit-row">
+        <select id="${key}-type" onchange="toggleCustom('${key}')">
+          <option value="" ${!s.type?'selected':''}>Not reviewed</option>
+          <option value="positive" ${s.type==='positive'?'selected':''}>Positive growth</option>
+          <option value="budget" ${s.type==='budget'?'selected':''}>Achieve budget</option>
+          <option value="custom" ${s.type==='custom'?'selected':''}>Custom commitment</option>
+        </select>
+        <input type="number" id="${key}-custom" placeholder="0.00" step="0.01" inputmode="decimal" value="${s.val??''}" style="display:${s.type==='custom'?'':'none'};" onblur="formatTwoDecimals('${key}-custom')">
+        <div class="date-wrap"><label>by</label><input type="date" id="${key}-date" value="${s.date||'2026-08-24'}"></div>
+      </div>
+      <div class="remarks-wrap"><label>Remarks (optional)</label><textarea id="${key}-remarks" placeholder="e.g. Manager cited two large corporate withdrawals this week">${s.remarks||''}</textarea></div>
+    </div>`;
+  });
+
+  html += renderRateCard('sbrr', 'SB run rate', 'accts / working day', ACTIVE_DATE, saved && saved.sbrr);
+  html += renderRateCard('cdccrr', 'CDCC run rate', 'accts / month', ACTIVE_DATE, saved && saved.cdccrr);
+
+  const phoneLine = staticB.phone ? `${staticB.manager_name || ''} \u2014 ${staticB.phone}` : 'no contact number on file';
+  const enteredHint = saved && saved.enteredBy ? ` &middot; last saved by ${saved.enteredBy}` : '';
+  html += `
+    <div class="btn-row" style="margin-bottom:6px;"><button onclick="saveCommitments()">Save commitments</button></div>
+    <div class="save-status" id="saveStatus">${saved ? 'Loaded previously saved commitments for this meeting'+enteredHint+'.' : 'No commitments saved yet for this meeting.'}</div>
+    <div class="preview-card" style="margin-top:14px;">
+      <h3>Message preview</h3>
+      <p id="previewText">${saved ? 'Loaded from saved data — click Save to refresh after changes.' : 'Set at least one commitment and click Save to build the message.'}</p>
+      <div class="contact-hint">Branch manager contact: ${phoneLine} &middot; ${staticB.email}</div>
+      <div class="btn-row" style="margin-top:12px;">
+        <button id="btnEmail" class="ghost" onclick="sendEmail()">✉ Email</button>
+        <button id="btnWA" class="ghost" onclick="sendWhatsApp()" ${staticB.phone ? '' : 'disabled'}>✦ WhatsApp</button>
+        <button id="btnSMS" class="ghost" onclick="sendSMS()" ${staticB.phone ? '' : 'disabled'}>☎ SMS</button>
+      </div>
+    </div>`;
+  content.innerHTML = html;
+  if(saved) buildPreview();
+}
+function toggleCustom(key){ document.getElementById(key+'-custom').style.display = (document.getElementById(key+'-type').value==='custom') ? '' : 'none'; }
+function currentMessage(){
+  const code = document.getElementById('branchSel').value;
+  const b = CURRENT[code]; const staticB = STATIC.find(x=>x.code==code);
+  const lines = [];
+  PARAMS.forEach(([key,label])=>{
+    const type = document.getElementById(key+'-type').value;
+    if(!type) return;
+    const dateVal = document.getElementById(key+'-date').value;
+    const dateTxt = dateVal ? fmtDate(dateVal) : 'no date';
+    let detail = TYPE_LABEL[type];
+    if(type==='custom'){
+      const val = document.getElementById(key+'-custom').value;
+      detail = val ? ('custom commitment of '+val) : 'custom commitment (figure not entered)';
+    }
+    const remarks = document.getElementById(key+'-remarks').value.trim();
+    let line = `- ${label}: currently ${b[key].status||'unknown'} (gap ${money(b[key].gap)}) → committed to ${detail}, by ${dateTxt}`;
+    if(remarks) line += `\n  Remarks: ${remarks}`;
+    lines.push(line);
+  });
+  ['sbrr','cdccrr'].forEach(key=>{
+    const targetEl = document.getElementById(key+'-target');
+    if(!targetEl || !targetEl.value) return;
+    const dateVal = document.getElementById(key+'-date').value;
+    const dateTxt = dateVal ? fmtDate(dateVal) : 'no date';
+    const label = key==='sbrr' ? 'SB run rate' : 'CDCC run rate';
+    const reqTxt = document.getElementById(key+'-required') ? document.getElementById(key+'-required').textContent : '';
+    let line = `- ${label}: target ${targetEl.value}, by ${dateTxt}${reqTxt&&reqTxt!=='—'?' ('+reqTxt+')':''}`;
+    const remarks = document.getElementById(key+'-remarks').value.trim();
+    if(remarks) line += `\n  Remarks: ${remarks}`;
+    lines.push(line);
+  });
+  if(!lines.length) return null;
+  const meetingDate = document.getElementById('meetingDate').value;
+  return { b: staticB, text: `${staticB.name} branch, committed in review (${fmtDate(meetingDate)}):\n${lines.join('\n')}` };
+}
+function formatTwoDecimals(id){
+  const el = document.getElementById(id);
+  const v = parseFloat(el.value);
+  el.value = isNaN(v) ? '' : v.toFixed(2);
+}
+
+// ---------- RUN RATE (cumulative since 1 Apr 2026) ----------
+const PERIOD_START = new Date(2026,3,1); // 1 Apr 2026
+// Tamil Nadu bank holidays 2026 — G.O.(Ms.) No.708, Public (Misc.) Dept, 11 Nov 2025,
+// cross-checked against the RBI/bank holiday matrix. Named/festival holidays only —
+// Sundays and 2nd/4th Saturdays are excluded separately below (not listed individually).
+const TN_HOLIDAYS_2026 = new Set([
+  '2026-01-01','2026-01-14','2026-01-15','2026-01-16','2026-01-26', // New Year, Pongal, Thiruvalluvar Day, Uzhavar Thirunal, Republic Day
+  '2026-03-19','2026-03-21','2026-03-31', // Telugu New Year, Eid-ul-Fitr, Mahavir Jayanti
+  '2026-04-01','2026-04-03','2026-04-14', // Annual A/c Closing, Good Friday, Ambedkar Jayanti + Tamil New Year
+  '2026-05-01','2026-05-27', // May Day, Bakrid
+  '2026-06-26', // Muharram
+  '2026-08-15','2026-08-25', // Independence Day, Milad-un-Nabi
+  '2026-09-04','2026-09-14', // Krishna Jayanthi, Vinayaka Chaturthi
+  '2026-10-02','2026-10-19','2026-10-20', // Gandhi Jayanti, Ayudha Pooja, Vijaya Dashami
+  '2026-12-25' // Christmas
+]);
+function isSecondOrFourthSaturday(d){
+  if(d.getDay()!==6) return false;
+  const occurrence = Math.ceil(d.getDate()/7);
+  return occurrence===2 || occurrence===4;
+}
+function isTNHoliday(d){
+  if(d.getDay()===0) return true; // Sunday
+  if(isSecondOrFourthSaturday(d)) return true;
+  const iso = d.toISOString().slice(0,10);
+  return TN_HOLIDAYS_2026.has(iso);
+}
+function workingDaysBetween(start,end){ let d=new Date(start),c=0; while(d<end){ d.setDate(d.getDate()+1); if(!isTNHoliday(d)) c++; } return c; }
+function monthsBetween(start,end){ return Math.max(0.1,(end-start)/(1000*60*60*24*30.44)); }
+function periodToDate(period){ return new Date(parseInt(period.slice(0,4)), parseInt(period.slice(4,6))-1, parseInt(period.slice(6,8))); }
+
+function renderRateCard(key, label, unitLabel, activeDate, saved){
+  const s = saved || {};
+  const todayLabel = activeDate ? fmtPeriod(activeDate) : '—';
+  return `
+    <div class="param-card">
+      <h3>${label}</h3>
+      <div class="date-wrap" style="margin-bottom:12px;"><label>by</label><input type="date" id="${key}-date" value="${s.date||'2026-08-24'}" onchange="calcRR('${key}')"></div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:10px;">
+        <div style="flex:1;min-width:150px;">
+          <label style="font-size:11.5px;color:var(--text-faint);display:block;margin-bottom:3px;">Current rate (Apr\u2013${todayLabel}, ${unitLabel})</label>
+          <input type="number" step="0.01" inputmode="decimal" id="${key}-cur" value="${s.cur??''}" placeholder="0.00" oninput="calcRR('${key}')" onblur="formatTwoDecimals('${key}-cur')">
+        </div>
+        <div style="flex:1;min-width:150px;">
+          <label style="font-size:11.5px;color:var(--text-faint);display:block;margin-bottom:3px;">Committed rate (${unitLabel})</label>
+          <input type="number" step="0.01" inputmode="decimal" id="${key}-target" value="${s.target??''}" placeholder="0.00" oninput="calcRR('${key}')" onblur="formatTwoDecimals('${key}-target')">
+        </div>
+      </div>
+      <div style="background:var(--surface-2);border-radius:7px;padding:8px 12px;font-size:12.5px;" id="${key}-required">\u2014</div>
+      <div class="remarks-wrap" style="margin-top:10px;"><label>Remarks (optional)</label><textarea id="${key}-remarks" placeholder="e.g. Festival season expected to slow account opening">${s.remarks||''}</textarea></div>
+    </div>`;
+}
+
+function calcRR(key){
+  const curRate = parseFloat(document.getElementById(key+'-cur').value) || 0;
+  const targetRate = parseFloat(document.getElementById(key+'-target').value) || 0;
+  const dateVal = document.getElementById(key+'-date').value;
+  const out = document.getElementById(key+'-required');
+  if(!dateVal || !ACTIVE_DATE || !targetRate){ out.textContent = '\u2014'; return; }
+  const today = periodToDate(ACTIVE_DATE);
+  const end = new Date(dateVal+'T00:00:00');
+  const isMonthly = (key === 'cdccrr');
+  const unitToday = isMonthly ? monthsBetween(PERIOD_START, today) : workingDaysBetween(PERIOD_START, today);
+  const unitEnd = isMonthly ? monthsBetween(PERIOD_START, end) : workingDaysBetween(PERIOD_START, end);
+  const accToday = Math.round(curRate * unitToday);
+  const accEnd = Math.round(targetRate * unitEnd);
+  const required = Math.max(0, accEnd - accToday);
+  out.textContent = `${required} new accounts needed by the honour date to bring the Apr-to-date rate to ${targetRate.toFixed(2)}`;
+}
+function buildPreview(){
+  const result = currentMessage();
+  document.getElementById('previewText').textContent = result ? result.text : 'No commitments set yet — choose a type on at least one row.';
+}
+async function saveCommitments(){
+  const code = document.getElementById('branchSel').value;
+  const meetingDate = document.getElementById('meetingDate').value;
+  const data = { enteredBy: localStorage.getItem('rc_name') };
+  PARAMS.forEach(([key])=>{
+    const type = document.getElementById(key+'-type').value;
+    if(!type) return;
+    data[key] = { type, val: type==='custom' ? document.getElementById(key+'-custom').value : undefined,
+      date: document.getElementById(key+'-date').value, remarks: document.getElementById(key+'-remarks').value.trim() || undefined };
+  });
+  ['sbrr','cdccrr'].forEach(key=>{
+    const targetEl = document.getElementById(key+'-target');
+    if(!targetEl || !targetEl.value) return;
+    data[key] = {
+      cur: document.getElementById(key+'-cur').value,
+      target: targetEl.value,
+      date: document.getElementById(key+'-date').value,
+      remarks: document.getElementById(key+'-remarks').value.trim() || undefined };
+  });
+  const statusEl = document.getElementById('saveStatus');
+  statusEl.textContent = 'Saving…';
+  try{
+    await callBackend('saveCommitment', {meetingDate, branchCode: code, data, enteredBy: localStorage.getItem('rc_name')});
+    statusEl.textContent = 'Saved by ' + localStorage.getItem('rc_name') + '.';
+    statusEl.className = 'save-status ok';
+  }catch(e){
+    statusEl.textContent = 'Save failed — try again.';
+    statusEl.className = 'save-status';
+  }
+  buildPreview();
+}
+function sendEmail(){
+  const r = currentMessage(); if(!r){ alert('Save commitments first.'); return; }
+  window.location.href = `mailto:${r.b.email}?subject=${encodeURIComponent('Review meeting commitments — '+r.b.name)}&body=${encodeURIComponent(r.text)}`;
+}
+function sendWhatsApp(){
+  const r = currentMessage(); if(!r){ alert('Save commitments first.'); return; }
+  if(!r.b.phone){ alert('No WhatsApp number on file for this branch.'); return; }
+  window.open(`https://wa.me/91${r.b.phone}?text=${encodeURIComponent(r.text)}`, '_blank');
+}
+function sendSMS(){
+  const r = currentMessage(); if(!r){ alert('Save commitments first.'); return; }
+  if(!r.b.phone){ alert('No SMS number on file for this branch.'); return; }
+  window.location.href = `sms:${r.b.phone}?body=${encodeURIComponent(r.text)}`;
+}
+
+// ---------- REVIEW REPORT TAB ----------
+async function populateReportMeetings(){
+  let meetings = [];
+  try{ meetings = await callBackend('listCommitmentMeetings', {}); }catch(e){ meetings = []; }
+  const sel = document.getElementById('reportMeetingSel');
+  sel.innerHTML = meetings.length ? meetings.map(m => `<option value="${m}">${fmtDate(m)} Review</option>`).join('') : '<option value="">No meetings saved yet</option>';
+}
+function craftWhatsAppUpdate(staticB, curB, meetingCommits){
+  const lines = []; let anyNegative = false;
+  PARAMS.forEach(([key,label])=>{
+    const commit = meetingCommits[key]; if(!commit) return;
+    const cur = curB[key];
+    if(cur.status === 'NEGATIVE'){ anyNegative = true;
+      lines.push(`⚠ ${label}: you'd committed to ${TYPE_LABEL[commit.type]} by ${fmtDate(commit.date)} — still short by ${money(Math.abs(cur.gap))}. Please prioritise this.`);
+    } else if(cur.status === 'ACHIEVED'){ lines.push(`✓ ${label}: target achieved — well done, keep it up!`);
+    } else { lines.push(`${label}: tracking positively, gap ${money(Math.abs(cur.gap))} remaining to budget — good progress, push on.`); }
+  });
+  [['sbrr','SB run rate'],['cdccrr','CDCC run rate']].forEach(([key,label])=>{
+    const commit = meetingCommits[key]; if(!commit) return;
+    lines.push(`${label}: committed rate ${commit.target||'—'} by ${fmtDate(commit.date)} — please confirm progress against this.`);
+  });
+  const opener = anyNegative ? `Dear ${staticB.name} team, following up on our review meeting commitments:` : `Dear ${staticB.name} team, good work since our last review — quick update:`;
+  const closer = anyNegative ? "Kindly update on the action plan to close the gap at the earliest." : "Keep up the momentum — thank you for the good work.";
+  return `${opener}\n${lines.join('\n')}\n${closer}`;
+}
+async function renderReport(){
+  const content = document.getElementById('reportContent');
+  const meetingId = document.getElementById('reportMeetingSel').value;
+  if(!meetingId){ content.innerHTML = '<div class="empty-hint">No saved review meetings yet — go to Review Meeting, save some commitments, then check back here.</div>'; return; }
+  content.innerHTML = '<div class="empty-hint">Loading…</div>';
+  let allCommits = {};
+  try{ allCommits = await callBackend('listCommitmentsForMeeting', {meetingDate: meetingId}); }catch(e){ allCommits = {}; }
+  const cards = [];
+  for(const codeStr of Object.keys(allCommits)){
+    const code = parseInt(codeStr);
+    const staticB = STATIC.find(x => x.code === code);
+    const curB = CURRENT[code];
+    if(!staticB || !curB) continue;
+    const mc = allCommits[codeStr];
+    const rows = PARAMS.map(([pkey,label]) => {
+      const commit = mc[pkey]; if(!commit) return '';
+      const cur = curB[pkey];
+      let what = TYPE_LABEL[commit.type]; if(commit.type==='custom') what = `custom (${commit.val||'—'})`;
+      return `<tr><td class="lbl">${label}</td><td>${what}</td><td>${fmtDate(commit.date)}</td><td>${money(cur.current)}</td><td>${money(cur.gap)}</td><td><span class="badge ${cur.status}">${cur.status}</span></td></tr>`;
+    }).join('') + [['sbrr','SB run rate'],['cdccrr','CDCC run rate']].map(([pkey,label])=>{
+      const commit = mc[pkey]; if(!commit) return '';
+      return `<tr><td class="lbl">${label}</td><td>rate ${commit.target||'—'}</td><td>${fmtDate(commit.date)}</td><td colspan="3" style="text-align:left;font-family:'IBM Plex Sans',sans-serif;color:var(--text-faint);">self-reported, not yet tied to a live figure</td></tr>`;
+    }).join('');
+    cards.push(`<div class="branch-card">
+      <div class="branch-head"><span class="name">${staticB.name} (${staticB.code})</span>
+      <span class="entered-by">${mc.enteredBy ? 'entered by '+mc.enteredBy : ''}</span>
+      <button onclick='sendReportWA(${code}, ${JSON.stringify(JSON.stringify(mc))})' ${staticB.phone ? '' : 'disabled'}>✦ WhatsApp update</button></div>
+      <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;"><table><thead><tr><th>Parameter</th><th>Committed</th><th>By</th><th>Current</th><th>Gap</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table></div>
+    </div>`);
+  }
+  content.innerHTML = cards.length ? cards.join('') : '<div class="empty-hint">No branches have saved commitments for this meeting.</div>';
+}
+function sendReportWA(code, mcJsonString){
+  const staticB = STATIC.find(x => x.code === code);
+  const curB = CURRENT[code];
+  const mc = JSON.parse(mcJsonString);
+  if(!staticB.phone){ alert('No WhatsApp number on file for this branch.'); return; }
+  window.open(`https://wa.me/91${staticB.phone}?text=${encodeURIComponent(craftWhatsAppUpdate(staticB, curB, mc))}`, '_blank');
+}
+
+// ---------- INIT ----------
+function initApp(){
+  const dropZone = document.getElementById('dropZone');
+  ['dragover','dragleave','drop'].forEach(evt => {
+    dropZone.addEventListener(evt, e => { e.preventDefault(); dropZone.classList.toggle('drag', evt==='dragover'); });
+  });
+  dropZone.addEventListener('drop', e => {
+    const file = e.dataTransfer.files[0];
+    if(file) handleFileUpload({target:{files:[file], value:''}});
+  });
+  populateBranchSelect();
+  refreshUploadedDatesList();
+  populateAnalysisDates();
+  populateReportMeetings();
+}
+
+// Auto sign-in if already remembered on this device
+(function(){
+  const pw = localStorage.getItem('rc_password');
+  const name = localStorage.getItem('rc_name');
+  if(pw && name){ enterApp(); }
+})();
+</script>
+</body>
+</html>
