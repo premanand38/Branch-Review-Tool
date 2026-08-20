@@ -216,13 +216,17 @@ async function attemptLogin(){
   const errEl = document.getElementById('gateErr');
   if(!name || !pw){ errEl.textContent = 'Enter both your name and the password.'; return; }
   localStorage.setItem('rc_password', pw);
-  errEl.textContent = 'Checking…';
+  errEl.textContent = 'Checking\u2026';
   try{
     await callBackend('listSnapshotDates', {});
     localStorage.setItem('rc_name', name);
     enterApp();
   }catch(e){
-    errEl.textContent = 'Incorrect password — check with your team.';
+    if(e.message === 'Invalid password'){
+      errEl.textContent = 'Incorrect password \u2014 check with your team.';
+    } else {
+      errEl.textContent = 'Could not reach the server (' + e.message + '). Check the Apps Script URL and deployment, not the password.';
+    }
     localStorage.removeItem('rc_password');
   }
 }
