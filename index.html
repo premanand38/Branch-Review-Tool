@@ -602,7 +602,8 @@ async function loadBranch(){
       <p id="previewText">${saved ? 'Loaded from saved data — click Save to refresh after changes.' : 'Set at least one commitment and click Save to build the message.'}</p>
       <div class="contact-hint">Branch manager contact: ${phoneLine} &middot; ${staticB.email}</div>
       <div class="btn-row" style="margin-top:12px;">
-        <button id="btnEmail" class="ghost" onclick="sendEmail()">✉ Email</button>
+        <button id="btnEmail" class="ghost" onclick="sendEmail()">\u2709 Send now</button>
+        <button id="btnEmailClient" class="ghost" onclick="openInMailClient()">\ud83d\udce7 Open in email app</button>
         <button id="btnWA" class="ghost" onclick="sendWhatsApp()" ${staticB.phone ? '' : 'disabled'}>✦ WhatsApp</button>
         <button id="btnSMS" class="ghost" onclick="sendSMS()" ${staticB.phone ? '' : 'disabled'}>☎ SMS</button>
       </div>
@@ -970,6 +971,13 @@ async function sendEmail(){
     alert('Could not send email: ' + e.message);
   }
 }
+async function openInMailClient(){
+  const code = document.getElementById('branchSel').value;
+  const meetingDate = document.getElementById('meetingDate').value;
+  const parts = await buildEmailParts(code, meetingDate, collectCurrentFormData());
+  if(!parts){ alert('Set attendance, or make at least one commitment first.'); return; }
+  window.location.href = `mailto:${parts.to}?subject=${encodeURIComponent(parts.subject)}&body=${encodeURIComponent(parts.plainBody)}`;
+}
 async function buildAbsentWhatsAppText(){
   const code = document.getElementById('branchSel').value;
   const staticB = STATIC.find(x=>x.code==code);
@@ -1118,7 +1126,8 @@ async function renderReport(){
       cards.push(`<div class="branch-card">
         <div class="branch-head"><span class="name">${staticB.name} (${staticB.code})</span>
         <span class="entered-by">${mc.enteredBy ? 'entered by '+mc.enteredBy : ''}</span>
-        <button onclick='sendReportEmail(${code}, "${meetingId}", ${JSON.stringify(JSON.stringify(mc))})'>\u2709 Email</button>
+        <button onclick='sendReportEmail(${code}, "${meetingId}", ${JSON.stringify(JSON.stringify(mc))})'>\u2709 Send now</button>
+        <button onclick='openReportMailClient(${code}, "${meetingId}", ${JSON.stringify(JSON.stringify(mc))})'>\ud83d\udce7 Open in email app</button>
         <button onclick='sendReportWA(${code}, ${JSON.stringify(JSON.stringify(mc))})' ${staticB.phone ? '' : 'disabled'}>\u2726 WhatsApp update</button></div>
         <p style="font-size:13px;margin:0;"><span class="badge NEGATIVE" style="background:var(--surface-3);color:var(--text-faint);">${label}</span>${mc.attendanceRemarks ? ' — '+mc.attendanceRemarks : ''}</p>
       </div>`);
@@ -1136,7 +1145,8 @@ async function renderReport(){
     cards.push(`<div class="branch-card">
       <div class="branch-head"><span class="name">${staticB.name} (${staticB.code})</span>
       <span class="entered-by">${mc.enteredBy ? 'entered by '+mc.enteredBy : ''}</span>
-      <button onclick='sendReportEmail(${code}, "${meetingId}", ${JSON.stringify(JSON.stringify(mc))})'>\u2709 Email</button>
+      <button onclick='sendReportEmail(${code}, "${meetingId}", ${JSON.stringify(JSON.stringify(mc))})'>\u2709 Send now</button>
+      <button onclick='openReportMailClient(${code}, "${meetingId}", ${JSON.stringify(JSON.stringify(mc))})'>\ud83d\udce7 Open in email app</button>
       <button onclick='sendReportWA(${code}, ${JSON.stringify(JSON.stringify(mc))})' ${staticB.phone ? '' : 'disabled'}>✦ WhatsApp update</button></div>
       <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;"><table><thead><tr><th>Parameter</th><th>Committed</th><th>By</th><th>Current</th><th>Gap</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table></div>
     </div>`);
@@ -1161,6 +1171,12 @@ async function sendReportEmail(code, meetingId, mcJsonString){
   }catch(e){
     alert('Could not send email: ' + e.message);
   }
+}
+async function openReportMailClient(code, meetingId, mcJsonString){
+  const mc = JSON.parse(mcJsonString);
+  const parts = await buildEmailParts(code, meetingId, mc);
+  if(!parts){ alert('No commitment data to send for this branch.'); return; }
+  window.location.href = `mailto:${parts.to}?subject=${encodeURIComponent(parts.subject)}&body=${encodeURIComponent(parts.plainBody)}`;
 }
 
 // ---------- INIT ----------
