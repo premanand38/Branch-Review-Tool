@@ -118,7 +118,7 @@ td:first-child{font-family:'IBM Plex Sans',sans-serif;text-align:left;}
     <h2>Branch Review Console</h2>
     <p>Enter the team password and your name to continue. Both are remembered on this device.</p>
     <label>Your name</label>
-    <input type="text" id="gateName" placeholder="e.g. Prem Anand R">
+    <select id="gateName"><option value="">Select your name\u2026</option></select>
     <label>Team password</label>
     <input type="password" id="gatePassword" placeholder="Shared RO password">
     <div class="gate-err" id="gateErr"></div>
@@ -192,6 +192,7 @@ td:first-child{font-family:'IBM Plex Sans',sans-serif;text-align:left;}
 
 <script>
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyom_CSEFVjakoJU7ne-H_yPU8GIChj3NNFLZX7PTuun8Tu8EUA1Nlrie1BxaUcfkyw4w/exec";
+const RO_STAFF = ["Nagaraj M","Masilamani K","Arya Vijayan","Deepa K","Gayathri B","Keerti R","Niladri Shekhar Das","Nirmala S","Sowmiya P","Thennarasu Ramasamy","Varakavi Chandra Sekhara","Visal S","Vivek M","Suresh V","Muthulakshmi S S","Rajashri T"];
 const STATIC = [{"code": 972, "name": "Adiyakkamangalam", "phone": "9940527787", "email": "iob972@iob.in", "SB": {"opening": 30.69, "target": 32.15}, "CD": {"opening": 0.32, "target": 0.36}, "RTD": {"opening": 16.83, "target": 17.66}, "manager_name": "Mahiban A"}, {"code": 1562, "name": "Agarapodakudi", "phone": "9047738554", "email": "iob1562@iob.in", "SB": {"opening": 36.71, "target": 38.72}, "CD": {"opening": 1.46, "target": 1.55}, "RTD": {"opening": 35.07, "target": 37.08}, "manager_name": "M Divya Bharathi"}, {"code": 228, "name": "Akkur", "phone": "9566011036", "email": "iob228@iob.in", "SB": {"opening": 47.68, "target": 50.11}, "CD": {"opening": 1.51, "target": 1.69}, "RTD": {"opening": 36.83, "target": 38.8}, "manager_name": "Nishanth K N"}, {"code": 533, "name": "Athikadai", "phone": "9962230621", "email": "iob533@iob.in", "SB": {"opening": 36.65, "target": 38.38}, "CD": {"opening": 0.28, "target": 0.32}, "RTD": {"opening": 48.1, "target": 50.66}, "manager_name": "Rajasekaran M"}, {"code": 2795, "name": "Avoor", "phone": "9887063361", "email": "iob2795@iob.in", "SB": {"opening": 24.8, "target": 25.89}, "CD": {"opening": 0.26, "target": 0.3}, "RTD": {"opening": 8.03, "target": 8.46}, "manager_name": "Arvind Sharma"}, {"code": 1076, "name": "Ayyakaranpulam", "phone": "9916256314", "email": "iob1076@iob.in", "SB": {"opening": 43.34, "target": 45.56}, "CD": {"opening": 1.75, "target": 1.81}, "RTD": {"opening": 17.77, "target": 18.72}, "manager_name": "Avadhesh Kumar Agyat"}, {"code": 3863, "name": "District Collectorate - Mayiladuthurai", "phone": "9677314507", "email": "iob3863@iob.in", "SB": {"opening": 10.63, "target": 11.21}, "CD": {"opening": 0.2, "target": 0.23}, "RTD": {"opening": 1.11, "target": 1.17}, "manager_name": "Senthil Kumar S G"}, {"code": 2404, "name": "District Court - Nagapattinam", "phone": "9952328955", "email": "iob2404@iob.in", "SB": {"opening": 15.16, "target": 15.99}, "CD": {"opening": 7.28, "target": 7.64}, "RTD": {"opening": 26.45, "target": 27.96}, "manager_name": "Karthick T"}, {"code": 1092, "name": "Edamelaiyur", "phone": "9965512512", "email": "iob1092@iob.in", "SB": {"opening": 25.34, "target": 26.73}, "CD": {"opening": 0.72, "target": 0.76}, "RTD": {"opening": 12.25, "target": 12.96}, "manager_name": "Pabitha S"}, {"code": 1260, "name": "Elanthangudi", "phone": "9946478199", "email": "iob1260@iob.in", "SB": {"opening": 33.03, "target": 35.2}, "CD": {"opening": 1.25, "target": 1.34}, "RTD": {"opening": 20.99, "target": 22.43}, "manager_name": "Anand C T"}, {"code": 2798, "name": "Elavangargudi", "phone": "9080646525", "email": "iob2798@iob.in", "SB": {"opening": 18.97, "target": 20.35}, "CD": {"opening": 0.86, "target": 0.97}, "RTD": {"opening": 12.34, "target": 13.28}, "manager_name": "Sudharsan S"}, {"code": 610, "name": "Enengudi", "phone": "8778156655", "email": "iob610@iob.in", "SB": {"opening": 36.71, "target": 38.99}, "CD": {"opening": 0.36, "target": 0.42}, "RTD": {"opening": 19.72, "target": 20.99}, "manager_name": "Karthikeyan V"}, {"code": 1049, "name": "Kankalancheri", "phone": "8789118164", "email": "iob1049@iob.in", "SB": {"opening": 23.34, "target": 24.62}, "CD": {"opening": 0.43, "target": 0.47}, "RTD": {"opening": 13.18, "target": 13.93}, "manager_name": "Rohit Kumar"}, {"code": 1270, "name": "Kattimedu (Kattimodu)", "phone": "8754266116", "email": "iob1270@iob.in", "SB": {"opening": 19.23, "target": 19.94}, "CD": {"opening": 0.31, "target": 0.35}, "RTD": {"opening": 15.83, "target": 16.43}, "manager_name": "Palanikumar R"}, {"code": 279, "name": "Kaverippoompattinam", "phone": "8778156655", "email": "iob279@iob.in", "SB": {"opening": 38.7, "target": 41.1}, "CD": {"opening": 1.43, "target": 1.52}, "RTD": {"opening": 18.03, "target": 19.2}, "manager_name": "Karthikeyan M"}, {"code": 3913, "name": "Keelaiyur", "phone": "9524842497", "email": "iob3913@iob.in", "SB": {"opening": 3.99, "target": 4.35}, "CD": {"opening": 0.16, "target": 0.18}, "RTD": {"opening": 0.57, "target": 0.61}, "manager_name": "Ajeeth Kanth"}, {"code": 795, "name": "Kiliyanur", "phone": "7598286462", "email": "iob795@iob.in", "SB": {"opening": 31.48, "target": 33.2}, "CD": {"opening": 1.24, "target": 1.29}, "RTD": {"opening": 15.41, "target": 16.29}, "manager_name": "Raghavendran N"}, {"code": 3970, "name": "Kodavasal", "phone": "9940261834", "email": "iob3970@iob.in", "SB": {"opening": 2.71, "target": 3.11}, "CD": {"opening": 0.08, "target": 0.16}, "RTD": {"opening": 0.32, "target": 0.37}, "manager_name": "Kannan Muthukannu"}, {"code": 1645, "name": "Kodikkalpalayam", "phone": "8522966924", "email": "iob1645@iob.in", "SB": {"opening": 33.75, "target": 35.6}, "CD": {"opening": 0.39, "target": 0.5}, "RTD": {"opening": 20.01, "target": 21.16}, "manager_name": "Eswara Naga Kiran Boda"}, {"code": 2797, "name": "Kodimangalam", "phone": "9566799509", "email": "iob2797@iob.in", "SB": {"opening": 14.31, "target": 14.94}, "CD": {"opening": 0.63, "target": 0.67}, "RTD": {"opening": 6.19, "target": 6.48}, "manager_name": "Prithiviraj Selvaraj"}, {"code": 39, "name": "Koothanallur", "phone": "9003850808", "email": "iob39@iob.in", "SB": {"opening": 61.68, "target": 66.18}, "CD": {"opening": 1.89, "target": 2.03}, "RTD": {"opening": 55.45, "target": 59.67}, "manager_name": "Yogeshwari D"}, {"code": 3547, "name": "Koothanallur - Lakshmangudi", "phone": "9629223895", "email": "iob3547@iob.in", "SB": {"opening": 12.14, "target": 13.03}, "CD": {"opening": 0.89, "target": 1.03}, "RTD": {"opening": 7.63, "target": 8.21}, "manager_name": "Bhuvaneswari"}, {"code": 1214, "name": "Kulikkarai", "phone": "8174887712", "email": "iob1214@iob.in", "SB": {"opening": 16.33, "target": 17.04}, "CD": {"opening": 0.75, "target": 0.79}, "RTD": {"opening": 15.52, "target": 16.22}, "manager_name": "Abhai Vikram Singh"}, {"code": 45, "name": "Kuttalam", "phone": "9095453190", "email": "iob45@iob.in", "SB": {"opening": 52.06, "target": 54.91}, "CD": {"opening": 0.92, "target": 1.03}, "RTD": {"opening": 43.48, "target": 45.96}, "manager_name": "Anubama K"}, {"code": 229, "name": "Manalmedu", "phone": "9003417847", "email": "iob229@iob.in", "SB": {"opening": 34.88, "target": 36.15}, "CD": {"opening": 1.46, "target": 1.52}, "RTD": {"opening": 18.8, "target": 19.52}, "manager_name": "L Gokulnath"}, {"code": 952, "name": "Manavalanallur", "phone": "9555750889", "email": "iob952@iob.in", "SB": {"opening": 47.15, "target": 49.73}, "CD": {"opening": 0.57, "target": 0.66}, "RTD": {"opening": 22.98, "target": 24.29}, "manager_name": "Uttam Lakra"}, {"code": 896, "name": "Mannargudi", "phone": "7416624430", "email": "iob896@iob.in", "SB": {"opening": 90.79, "target": 97.42}, "CD": {"opening": 1.66, "target": 1.93}, "RTD": {"opening": 65.17, "target": 71.38}, "manager_name": "Varagani Anil Babu"}, {"code": 57, "name": "Mayiladuthurai", "phone": "9677019725", "email": "iob57@iob.in", "SB": {"opening": 107.07, "target": 115.27}, "CD": {"opening": 1.76, "target": 2.78}, "RTD": {"opening": 134.31, "target": 147.11}, "manager_name": "Ganesan A"}, {"code": 1226, "name": "Muthupet (Idumbavanam)", "phone": "8090447554", "email": "iob1226@iob.in", "SB": {"opening": 45.46, "target": 48.11}, "CD": {"opening": 1.38, "target": 1.52}, "RTD": {"opening": 20.23, "target": 21.46}, "manager_name": "Ashish Kumar Kanaujia"}, {"code": 62, "name": "Nagapattinam", "phone": "8098891568", "email": "iob62@iob.in", "SB": {"opening": 116.58, "target": 123.19}, "CD": {"opening": 3.95, "target": 4.85}, "RTD": {"opening": 87.12, "target": 93.76}, "manager_name": "Saravanan T"}, {"code": 3837, "name": "Nagapattinam Medical College", "phone": "8072553940", "email": "iob3837@iob.in", "SB": {"opening": 8.62, "target": 9.24}, "CD": {"opening": 0.18, "target": 0.2}, "RTD": {"opening": 0.24, "target": 0.26}, "manager_name": "Ananda Priya Tr"}, {"code": 706, "name": "Nagore", "phone": "8939595831", "email": "iob706@iob.in", "SB": {"opening": 44.45, "target": 46.88}, "CD": {"opening": 1.26, "target": 1.37}, "RTD": {"opening": 17.7, "target": 18.71}, "manager_name": "S Sundararaman"}, {"code": 1862, "name": "Nannilam", "phone": "9600466586", "email": "iob1862@iob.in", "SB": {"opening": 19.72, "target": 20.8}, "CD": {"opening": 0.52, "target": 0.66}, "RTD": {"opening": 12.19, "target": 12.89}, "manager_name": "Aruloli K"}, {"code": 557, "name": "Nidur", "phone": "8610944287", "email": "iob557@iob.in", "SB": {"opening": 45.81, "target": 48.66}, "CD": {"opening": 0.27, "target": 0.34}, "RTD": {"opening": 22.97, "target": 24.46}, "manager_name": "Natarajan"}, {"code": 2858, "name": "Nilakkudi", "phone": "9461775625", "email": "iob2858@iob.in", "SB": {"opening": 11.13, "target": 11.74}, "CD": {"opening": 1.03, "target": 1.14}, "RTD": {"opening": 10.68, "target": 11.29}, "manager_name": "Suresh Kumar Meena"}, {"code": 1269, "name": "Pakkam - Kottur", "phone": "9965757009", "email": "iob1269@iob.in", "SB": {"opening": 21.66, "target": 22.84}, "CD": {"opening": 0.07, "target": 0.09}, "RTD": {"opening": 10.4, "target": 11.0}, "manager_name": "Prithvi Rajan"}, {"code": 272, "name": "Poonthottam", "phone": "9790845820", "email": "iob272@iob.in", "SB": {"opening": 36.31, "target": 38.3}, "CD": {"opening": 1.42, "target": 1.51}, "RTD": {"opening": 21.52, "target": 22.75}, "manager_name": "Jeyapraba R"}, {"code": 988, "name": "Punganur", "phone": "9442397716", "email": "iob988@iob.in", "SB": {"opening": 11.39, "target": 11.81}, "CD": {"opening": 0.05, "target": 0.07}, "RTD": {"opening": 10.17, "target": 10.56}, "manager_name": "Manimohan M"}, {"code": 523, "name": "Sankaranpandal", "phone": "9952298915", "email": "iob523@iob.in", "SB": {"opening": 39.06, "target": 40.91}, "CD": {"opening": 0.67, "target": 0.7}, "RTD": {"opening": 37.59, "target": 39.6}, "manager_name": "Arun Prasath A"}, {"code": 2334, "name": "Sembanarkoil", "phone": "9003125991", "email": "iob2334@iob.in", "SB": {"opening": 29.09, "target": 30.68}, "CD": {"opening": 1.28, "target": 1.39}, "RTD": {"opening": 27.47, "target": 29.04}, "manager_name": "Raghuram B V"}, {"code": 238, "name": "Sikkal", "phone": "7007717289", "email": "iob238@iob.in", "SB": {"opening": 25.94, "target": 27.08}, "CD": {"opening": 0.4, "target": 0.43}, "RTD": {"opening": 20.41, "target": 21.34}, "manager_name": "Anil Kumar Maurya"}, {"code": 83, "name": "Sirkali", "phone": "9884112719", "email": "iob83@iob.in", "SB": {"opening": 63.26, "target": 67.41}, "CD": {"opening": 1.94, "target": 2.09}, "RTD": {"opening": 41.76, "target": 44.63}, "manager_name": "Robinson S"}, {"code": 963, "name": "Specialised Sme - Mayiladuthurai Junction", "phone": "9941857585", "email": "iob963@iob.in", "SB": {"opening": 54.75, "target": 58.75}, "CD": {"opening": 2.58, "target": 2.95}, "RTD": {"opening": 53.83, "target": 57.93}, "manager_name": "Remya P"}, {"code": 2266, "name": "Thandalai", "phone": "7077609571", "email": "iob2266@iob.in", "SB": {"opening": 25.39, "target": 26.78}, "CD": {"opening": 0.85, "target": 0.94}, "RTD": {"opening": 18.12, "target": 19.16}, "manager_name": "Srikanta Meher"}, {"code": 2830, "name": "Tharangambadi - Poraiyar", "phone": "8072990772", "email": "iob2830@iob.in", "SB": {"opening": 30.14, "target": 31.79}, "CD": {"opening": 1.06, "target": 1.13}, "RTD": {"opening": 18.96, "target": 20.04}, "manager_name": "Divya"}, {"code": 2832, "name": "Thenmangalam - Azhiyur", "phone": "8840896518", "email": "iob2832@iob.in", "SB": {"opening": 14.95, "target": 15.61}, "CD": {"opening": 0.51, "target": 0.54}, "RTD": {"opening": 6.73, "target": 7.04}, "manager_name": "Prasoon Srivastava"}, {"code": 591, "name": "Therrzhundur", "phone": "9048484015", "email": "iob591@iob.in", "SB": {"opening": 47.05, "target": 49.28}, "CD": {"opening": 0.82, "target": 0.88}, "RTD": {"opening": 43.58, "target": 45.74}, "manager_name": "Ratheesh Raveendran Nair"}, {"code": 1365, "name": "Thillaivilakam", "phone": "8248579417", "email": "iob1365@iob.in", "SB": {"opening": 16.77, "target": 17.38}, "CD": {"opening": 0.14, "target": 0.16}, "RTD": {"opening": 8.33, "target": 8.65}, "manager_name": "Vikram Lakshmanan"}, {"code": 1041, "name": "Thirukalacheri", "phone": "8953010079", "email": "iob1041@iob.in", "SB": {"opening": 41.78, "target": 44.07}, "CD": {"opening": 0.7, "target": 0.75}, "RTD": {"opening": 20.45, "target": 21.62}, "manager_name": "Prabhat Verma"}, {"code": 2833, "name": "Thirumailadi - Kollidam", "phone": "9230433449", "email": "iob2833@iob.in", "SB": {"opening": 35.48, "target": 38.07}, "CD": {"opening": 0.93, "target": 1.04}, "RTD": {"opening": 20.04, "target": 21.56}, "manager_name": "Somnath Mukhuty"}, {"code": 3255, "name": "Thirumakkottai", "phone": "9867478763", "email": "iob3255@iob.in", "SB": {"opening": 23.08, "target": 24.09}, "CD": {"opening": 0.92, "target": 0.95}, "RTD": {"opening": 13.2, "target": 13.8}, "manager_name": "Vuggina Rupesh Charwak"}, {"code": 224, "name": "Thirumullaivasal", "phone": "8438344756", "email": "iob224@iob.in", "SB": {"opening": 38.06, "target": 39.86}, "CD": {"opening": 1.51, "target": 1.58}, "RTD": {"opening": 15.46, "target": 16.22}, "manager_name": "Praveenkumar A S P"}, {"code": 894, "name": "Thiruthuraipoondi", "phone": "8305674777", "email": "iob894@iob.in", "SB": {"opening": 59.09, "target": 62.76}, "CD": {"opening": 2.31, "target": 2.49}, "RTD": {"opening": 22.99, "target": 24.48}, "manager_name": "Vikas Singh"}, {"code": 750, "name": "Thiruvavaduthurai", "phone": "8870257521", "email": "iob750@iob.in", "SB": {"opening": 40.8, "target": 42.74}, "CD": {"opening": 0.38, "target": 0.42}, "RTD": {"opening": 39.03, "target": 40.97}, "manager_name": "Renuga J"}, {"code": 2580, "name": "Thittacherry", "phone": "9659889826", "email": "iob2580@iob.in", "SB": {"opening": 25.18, "target": 26.28}, "CD": {"opening": 0.48, "target": 0.54}, "RTD": {"opening": 13.56, "target": 14.18}, "manager_name": "Arangovalan S"}, {"code": 618, "name": "Thopputhurai", "phone": "9841201454", "email": "iob618@iob.in", "SB": {"opening": 46.95, "target": 49.52}, "CD": {"opening": 2.12, "target": 2.23}, "RTD": {"opening": 27.35, "target": 28.91}, "manager_name": "Maria Doss"}, {"code": 97, "name": "Thrivaroor", "phone": "9943444642", "email": "iob97@iob.in", "SB": {"opening": 83.16, "target": 90.75}, "CD": {"opening": 3.93, "target": 4.99}, "RTD": {"opening": 92.4, "target": 101.2}, "manager_name": "Venkateswaran E"}, {"code": 2883, "name": "Tiruvarur - Vilamal", "phone": "8123456197", "email": "iob2883@iob.in", "SB": {"opening": 18.71, "target": 19.74}, "CD": {"opening": 0.78, "target": 0.92}, "RTD": {"opening": 12.18, "target": 12.87}, "manager_name": "Devarajan"}, {"code": 2796, "name": "Ullikottai", "phone": "6381558746", "email": "iob2796@iob.in", "SB": {"opening": 40.0, "target": 42.34}, "CD": {"opening": 1.74, "target": 1.85}, "RTD": {"opening": 28.59, "target": 30.33}, "manager_name": "Anbalagan N"}, {"code": 601, "name": "Vadagarai", "phone": "9445295009", "email": "iob601@iob.in", "SB": {"opening": 36.97, "target": 38.99}, "CD": {"opening": 0.56, "target": 0.6}, "RTD": {"opening": 21.81, "target": 23.06}, "manager_name": "R Prabhakaran"}, {"code": 206, "name": "Vaitheeswaranloil", "phone": "9444795012", "email": "iob206@iob.in", "SB": {"opening": 34.69, "target": 36.21}, "CD": {"opening": 1.84, "target": 1.91}, "RTD": {"opening": 122.65, "target": 128.26}, "manager_name": "Krishnan N"}, {"code": 1197, "name": "Valangaiman (Haridwaramangalam)", "phone": "7708517921", "email": "iob1197@iob.in", "SB": {"opening": 67.8, "target": 71.51}, "CD": {"opening": 3.02, "target": 3.2}, "RTD": {"opening": 24.38, "target": 25.77}, "manager_name": "Veeramani K"}, {"code": 2831, "name": "Vanduvancheri - Thulasiyapattinam", "phone": "6383174981", "email": "iob2831@iob.in", "SB": {"opening": 22.56, "target": 23.55}, "CD": {"opening": 0.96, "target": 0.98}, "RTD": {"opening": 10.53, "target": 11.01}, "manager_name": "Abarajeetha"}, {"code": 244, "name": "Velankanni", "phone": "9952744509", "email": "iob244@iob.in", "SB": {"opening": 42.35, "target": 45.44}, "CD": {"opening": 4.45, "target": 5.18}, "RTD": {"opening": 53.9, "target": 58.01}, "manager_name": "Thirumal T"}, {"code": 1232, "name": "Vilundamavadi", "phone": "9952999291", "email": "iob1232@iob.in", "SB": {"opening": 29.31, "target": 30.59}, "CD": {"opening": 0.47, "target": 0.53}, "RTD": {"opening": 8.78, "target": 9.18}, "manager_name": "Senthil Kumar P"}];
 const PARAMS = [['SB','Savings Bank'],['CD','CDCC (Current Deposits)'],['RTD','Term Deposits']];
 const TYPE_LABEL = {positive:'positive growth', budget:'achieve budget', custom:'custom commitment'};
@@ -430,7 +431,21 @@ async function loadBranch(){
   let saved = null;
   try{ saved = await callBackend('getCommitment', {meetingDate, branchCode: code}); }catch(e){ saved = null; }
 
-  let html = '';
+  const attendance = (saved && saved.attendance) || 'present';
+  let html = `
+    <div class="param-card">
+      <h3>Attendance</h3>
+      <select id="attendance-type" onchange="toggleAttendance()">
+        <option value="present" ${attendance==='present'?'selected':''}>Present</option>
+        <option value="absent" ${attendance==='absent'?'selected':''}>Absent for the meeting</option>
+        <option value="leave" ${attendance==='leave'?'selected':''}>Approved leave</option>
+      </select>
+      <div id="attendance-reason-wrap" style="margin-top:10px;display:${attendance==='present'?'none':''};">
+        <label style="font-size:11.5px;color:var(--text-faint);display:block;margin-bottom:4px;">Notes (optional)</label>
+        <textarea id="attendance-remarks" placeholder="e.g. On approved medical leave, returning 20 Aug">${(saved && saved.attendanceRemarks) || ''}</textarea>
+      </div>
+    </div>
+    <div id="paramsWrapper" style="display:${attendance==='present'?'':'none'};">`;
   PARAMS.forEach(([key,label])=>{
     const d = b[key];
     const s = saved && saved[key] ? saved[key] : {};
@@ -460,6 +475,7 @@ async function loadBranch(){
 
   html += renderRateCard('sbrr', 'SB run rate', 'accts / working day', ACTIVE_DATE, saved && saved.sbrr);
   html += renderRateCard('cdccrr', 'CDCC run rate', 'accts / month', ACTIVE_DATE, saved && saved.cdccrr);
+  html += '</div>';
 
   const phoneLine = staticB.phone ? `${staticB.manager_name || ''} \u2014 ${staticB.phone}` : 'no contact number on file';
   const enteredHint = saved && saved.enteredBy ? ` &middot; last saved by ${saved.enteredBy}` : '';
@@ -480,8 +496,23 @@ async function loadBranch(){
   if(saved) buildPreview();
 }
 function toggleCustom(key){ document.getElementById(key+'-custom').style.display = (document.getElementById(key+'-type').value==='custom') ? '' : 'none'; }
+function toggleAttendance(){
+  const val = document.getElementById('attendance-type').value;
+  document.getElementById('paramsWrapper').style.display = (val==='present') ? '' : 'none';
+  document.getElementById('attendance-reason-wrap').style.display = (val==='present') ? 'none' : '';
+}
 function currentMessage(){
   const code = document.getElementById('branchSel').value;
+  const staticBEarly = STATIC.find(x=>x.code==code);
+  const meetingDateEarly = document.getElementById('meetingDate').value;
+  const attendance = document.getElementById('attendance-type').value;
+  if(attendance !== 'present'){
+    const label = attendance==='absent' ? 'Absent for the meeting' : 'Approved leave';
+    const reason = document.getElementById('attendance-remarks').value.trim();
+    let text = `${staticBEarly.name} branch \u2014 ${label} on ${fmtDate(meetingDateEarly)}.`;
+    if(reason) text += `\n  Notes: ${reason}`;
+    return { b: staticBEarly, text };
+  }
   const b = CURRENT[code]; const staticB = STATIC.find(x=>x.code==code);
   const lines = [];
   PARAMS.forEach(([key,label])=>{
@@ -597,7 +628,23 @@ function buildPreview(){
 async function saveCommitments(){
   const code = document.getElementById('branchSel').value;
   const meetingDate = document.getElementById('meetingDate').value;
-  const data = { enteredBy: localStorage.getItem('rc_name') };
+  const attendance = document.getElementById('attendance-type').value;
+  const data = { enteredBy: localStorage.getItem('rc_name'), attendance };
+  if(attendance !== 'present'){
+    data.attendanceRemarks = document.getElementById('attendance-remarks').value.trim() || undefined;
+    const statusEl = document.getElementById('saveStatus');
+    statusEl.textContent = 'Saving\u2026';
+    try{
+      await callBackend('saveCommitment', {meetingDate, branchCode: code, data, enteredBy: localStorage.getItem('rc_name')});
+      statusEl.textContent = 'Saved by ' + localStorage.getItem('rc_name') + '.';
+      statusEl.className = 'save-status ok';
+    }catch(e){
+      statusEl.textContent = 'Save failed \u2014 try again.';
+      statusEl.className = 'save-status';
+    }
+    buildPreview();
+    return;
+  }
   PARAMS.forEach(([key])=>{
     const type = document.getElementById(key+'-type').value;
     if(!type) return;
@@ -648,6 +695,13 @@ async function populateReportMeetings(){
   sel.innerHTML = meetings.length ? meetings.map(m => `<option value="${m}">${fmtDate(m)} Review</option>`).join('') : '<option value="">No meetings saved yet</option>';
 }
 function craftWhatsAppUpdate(staticB, curB, meetingCommits){
+  if(meetingCommits.attendance && meetingCommits.attendance !== 'present'){
+    const label = meetingCommits.attendance === 'absent' ? 'absent for' : 'on approved leave during';
+    let msg = `Dear ${staticB.name} team, noted that you were ${label} today's review meeting.`;
+    if(meetingCommits.attendanceRemarks) msg += ` (${meetingCommits.attendanceRemarks})`;
+    msg += ' We will cover your commitments in the next review.';
+    return msg;
+  }
   const lines = []; let anyNegative = false;
   PARAMS.forEach(([key,label])=>{
     const commit = meetingCommits[key]; if(!commit) return;
@@ -679,6 +733,16 @@ async function renderReport(){
     const curB = CURRENT[code];
     if(!staticB || !curB) continue;
     const mc = allCommits[codeStr];
+    if(mc.attendance && mc.attendance !== 'present'){
+      const label = mc.attendance === 'absent' ? 'Absent for the meeting' : 'Approved leave';
+      cards.push(`<div class="branch-card">
+        <div class="branch-head"><span class="name">${staticB.name} (${staticB.code})</span>
+        <span class="entered-by">${mc.enteredBy ? 'entered by '+mc.enteredBy : ''}</span>
+        <button onclick='sendReportWA(${code}, ${JSON.stringify(JSON.stringify(mc))})' ${staticB.phone ? '' : 'disabled'}>\u2726 WhatsApp update</button></div>
+        <p style="font-size:13px;margin:0;"><span class="badge NEGATIVE" style="background:var(--surface-3);color:var(--text-faint);">${label}</span>${mc.attendanceRemarks ? ' — '+mc.attendanceRemarks : ''}</p>
+      </div>`);
+      continue;
+    }
     const rows = PARAMS.map(([pkey,label]) => {
       const commit = mc[pkey]; if(!commit) return '';
       const cur = curB[pkey];
@@ -723,9 +787,14 @@ function initApp(){
 
 // Auto sign-in if already remembered on this device
 (function(){
+  const sel = document.getElementById('gateName');
+  sel.innerHTML = '<option value="">Select your name\u2026</option>' + RO_STAFF.map(n => `<option value="${n}">${n}</option>`).join('');
   const pw = localStorage.getItem('rc_password');
   const name = localStorage.getItem('rc_name');
-  if(pw && name){ enterApp(); }
+  if(pw && name){
+    if([...sel.options].some(o => o.value === name)) sel.value = name;
+    enterApp();
+  }
 })();
 </script>
 </body>
