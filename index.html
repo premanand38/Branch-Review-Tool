@@ -672,14 +672,237 @@ async function saveCommitments(){
   }
   buildPreview();
 }
-function sendEmail(){
-  const r = currentMessage(); if(!r){ alert('Save commitments first.'); return; }
-  window.location.href = `mailto:${r.b.email}?subject=${encodeURIComponent('Review meeting commitments — '+r.b.name)}&body=${encodeURIComponent(r.text)}`;
+function describeCommitmentType(type, val){
+  if(type==='positive') return 'Positive growth';
+  if(type==='budget') return 'Achieve budget';
+  if(type==='custom') return `Custom (${val})`;
+  return type;
 }
-function sendWhatsApp(){
-  const r = currentMessage(); if(!r){ alert('Save commitments first.'); return; }
-  if(!r.b.phone){ alert('No WhatsApp number on file for this branch.'); return; }
-  window.open(`https://wa.me/91${r.b.phone}?text=${encodeURIComponent(r.text)}`, '_blank');
+function wasHonoured(param, commit, curB){
+  const cur = curB[param];
+  if(!cur || cur.current===null) return null;
+  if(commit.type==='budget') return cur.status==='ACHIEVED';
+  if(commit.type==='positive') return cur.status==='ACHIEVED' || cur.status==='POSITIVE';
+  if(commit.type==='custom'){
+    const v = parseFloat(commit.val);
+    return isNaN(v) ? null : cur.current >= v;
+  }
+  return null;
+}
+
+async function buildEmailParts(){
+  const code = document.getElementById('branchSel').value;
+  const staticB = STATIC.find(x=>x.code==code);
+  const b = CURRENT[code];
+  const meetingDate = document.getElementById('meetingDate').value;
+  const meetingDateTxt = fmtDate(meetingDate);
+  const attendance = document.getElementById('attendance-type').value;
+  const greeting = staticB.manager_name || 'Branch Manager';
+
+  if(attendance !== 'present'){
+    const reason = document.getElementById('attendance-remarks').value.trim();
+    const isLeave = attendance === 'leave';
+
+    // Present position table (same figures as the balance rows)
+    const posRows = PARAMS.map(([key,label])=>{
+      const d = b[key];
+      if(d.current===null) return '';
+      return `<tr><td style="padding:8px 10px;border:1px solid #ccc;">${label}</td><td style="text-align:right;padding:8px 10px;border:1px solid #ccc;">${money(d.current)}</td><td style="text-align:right;padding:8px 10px;border:1px solid #ccc;">${money(d.target)}</td><td style="text-align:right;padding:8px 10px;border:1px solid #ccc;color:${d.gap<0?'#c0392b':'#222'};">${money(d.gap)}</td><td style="padding:8px 10px;border:1px solid #ccc;">${d.status||'\u2014'}</td></tr>`;
+    }).join('');
+    const posPlain = PARAMS.map(([key,label])=>{
+      const d = b[key];
+      if(d.current===null) return null;
+      return `${label.padEnd(16)} Current: ${money(d.current).padEnd(10)} Target: ${money(d.target).padEnd(10)} Gap: ${money(d.gap).padEnd(10)} Status: ${d.status}`;
+    }).filter(Boolean).join('\n');
+
+    // Full commitment history, most recent first
+    let history = [];
+    try{ history = await callBackend('getCommitmentHistory', {branchCode: code, beforeDate: meetingDate}); }catch(e){ history = []; }
+
+    const askLines = [];
+    let historySectionsHtml = '';
+    let historySectionsPlain = '';
+
+    if(history.length){
+      PARAMS.forEach(([key,label])=>{
+        const entries = history.map(h => h.data[key] ? { date: h.meetingDate, commit: h.data[key] } : null).filter(Boolean);
+        if(!entries.length) return;
+        entries.forEach(e => { e.honoured = wasHonoured(key, e.commit, b); });
+        let streak = 0;
+        for(const e of entries){ if(e.honoured === false) streak++; else break; }
+
+        if(streak >= 2){
+          const shown = entries.slice(0, Math.min(entries.length, 6));
+          const rowsHtml = shown.map(e => `<tr><td style="padding:8px 10px;border:1px solid #ccc;">${fmtDate(e.date)}</td><td style="padding:8px 10px;border:1px solid #ccc;">${describeCommitmentType(e.commit.type, e.commit.val)}</td><td style="padding:8px 10px;border:1px solid #ccc;">${fmtDate(e.commit.date)}</td><td style="padding:8px 10px;border:1px solid #ccc;color:${e.honoured===false?'#c0392b':(e.honoured===true?'#1a7a4c':'#666')};">${e.honoured===null?'Not evaluated':(e.honoured?'Honoured':'Not honoured')}</td></tr>`).join('');
+          historySectionsHtml += `<p>Your ${label} commitment history over the last ${shown.length} review${shown.length>1?'s':''}:</p>
+<table style="border-collapse:collapse;font-family:Arial,sans-serif;font-size:13px;width:100%;margin-bottom:8px;">
+<thead><tr style="background:#f2f2f2;"><th style="padding:8px 10px;border:1px solid #ccc;">Review date</th><th style="padding:8px 10px;border:1px solid #ccc;">Committed to</th><th style="padding:8px 10px;border:1px solid #ccc;">Committed by</th><th style="padding:8px 10px;border:1px solid #ccc;">Status</th></tr></thead>
+<tbody>${rowsHtml}</tbody></table>
+<p style="color:#c0392b;font-size:13px;margin:0 0 16px;">${label} has not been honoured for ${streak} consecutive reviews.</p>`;
+          historySectionsPlain += `\n${label} commitment history (last ${shown.length} reviews):\n` + shown.map(e=>`  ${fmtDate(e.date)}  Committed: ${describeCommitmentType(e.commit.type,e.commit.val)}  By: ${fmtDate(e.commit.date)}  Status: ${e.honoured===null?'Not evaluated':(e.honoured?'Honoured':'Not honoured')}`).join('\n') + `\n${label} has not been honoured for ${streak} consecutive reviews.\n`;
+          askLines.push(`An explanation for the continued non-honouring of the ${label} commitment across ${streak} consecutive reviews`);
+        } else {
+          const e = entries[0];
+          const statusTxt = e.honoured===null ? 'Not evaluated' : (e.honoured ? 'Honoured' : 'Not yet honoured');
+          historySectionsHtml += `<p>In the previous review meeting held on ${fmtDate(e.date)}, you had committed to <b>${label}</b>: ${describeCommitmentType(e.commit.type, e.commit.val)}, by ${fmtDate(e.commit.date)}. Status: <span style="color:${e.honoured===false?'#c0392b':(e.honoured===true?'#1a7a4c':'#666')};">${statusTxt}</span></p>`;
+          historySectionsPlain += `\nPrevious ${label} commitment (review held on ${fmtDate(e.date)}): ${describeCommitmentType(e.commit.type,e.commit.val)}, by ${fmtDate(e.commit.date)}. Status: ${statusTxt}\n`;
+          if(e.honoured === false) askLines.push(`An explanation for not honouring the ${label} commitment made in the review meeting held on ${fmtDate(e.date)}`);
+        }
+      });
+    }
+    if(!isLeave) askLines.unshift('An explanation for not attending the scheduled review meeting');
+
+    const openerHtml = isLeave
+      ? `<p>We note that you were on approved leave and could not attend the review meeting scheduled on ${meetingDateTxt}.</p>`
+      : `<p>Despite a scheduled review meeting on ${meetingDateTxt}, you did not attend the meeting.</p>`;
+    const openerPlain = isLeave
+      ? `We note that you were on approved leave and could not attend the review meeting scheduled on ${meetingDateTxt}.`
+      : `Despite a scheduled review meeting on ${meetingDateTxt}, you did not attend the meeting.`;
+
+    const askHtml = askLines.length
+      ? `<p>You are requested to provide:</p><ol>${askLines.map(a=>`<li>${a}</li>`).join('')}</ol><p>Kindly respond at the earliest.</p>`
+      : `<p>Kindly ensure attendance and honour your commitments at the next scheduled review.</p>`;
+    const askPlain = askLines.length
+      ? `You are requested to provide:\n${askLines.map((a,i)=>`${i+1}. ${a}`).join('\n')}\n\nKindly respond at the earliest.`
+      : `Kindly ensure attendance and honour your commitments at the next scheduled review.`;
+
+    const posSectionHtml = posRows ? `<p>PFB your branch's present position as on ${fmtPeriod(ACTIVE_DATE)}:</p>
+<table style="border-collapse:collapse;font-family:Arial,sans-serif;font-size:13px;width:100%;margin-bottom:12px;">
+<thead><tr style="background:#f2f2f2;"><th style="padding:8px 10px;border:1px solid #ccc;">Parameter</th><th style="padding:8px 10px;border:1px solid #ccc;">Current</th><th style="padding:8px 10px;border:1px solid #ccc;">Target</th><th style="padding:8px 10px;border:1px solid #ccc;">Gap</th><th style="padding:8px 10px;border:1px solid #ccc;">Status</th></tr></thead>
+<tbody>${posRows}</tbody></table>` : '';
+
+    const htmlBody = `<p>Dear ${greeting},</p>
+${openerHtml}
+${reason ? `<p>Note on file: ${reason}</p>` : ''}
+${posSectionHtml}
+${historySectionsHtml}
+${askHtml}
+<p>Regards,<br>Regional Office \u2014 Nagapattinam Region<br>Indian Overseas Bank</p>`;
+
+    const plainBody = `Dear ${greeting},\n\n${openerPlain}\n${reason ? ('Note on file: '+reason+'\n') : ''}\nPresent position as on ${fmtPeriod(ACTIVE_DATE)}:\n${posPlain || '(no current data)'}\n${historySectionsPlain}\n${askPlain}\n\nRegards,\nRegional Office \u2014 Nagapattinam Region\nIndian Overseas Bank`;
+
+    return { to: staticB.email, subject: `Review Meeting \u2014 ${staticB.name} \u2014 ${meetingDateTxt}${isLeave?'':' \u2014 Non-Attendance'}`, plainBody, htmlBody };
+  }
+
+  const rows = [];
+  PARAMS.forEach(([key,label])=>{
+    const type = document.getElementById(key+'-type').value;
+    if(!type) return;
+    const d = b[key];
+    let committed = TYPE_LABEL[type];
+    if(type==='custom'){
+      const val = document.getElementById(key+'-custom').value;
+      committed = val ? `Custom (${val})` : 'Custom (not entered)';
+    }
+    const dateVal = document.getElementById(key+'-date').value;
+    rows.push({ label, current: money(d.current), target: money(d.target), gap: money(d.gap), gapNeg: d.gap<0, committed, by: fmtDate(dateVal) });
+  });
+  ['sbrr','cdccrr'].forEach(key=>{
+    const targetEl = document.getElementById(key+'-target');
+    if(!targetEl || !targetEl.value) return;
+    const label = key==='sbrr' ? 'SB run rate' : 'CDCC run rate';
+    const dateVal = document.getElementById(key+'-date').value;
+    rows.push({ label, current: '\u2014', target: targetEl.value, gap: '\u2014', gapNeg:false, committed: `Rate ${targetEl.value}`, by: fmtDate(dateVal) });
+  });
+  if(!rows.length) return null;
+
+  const colWidths = [16,12,12,10,20,10];
+  const plainHeader = ['Parameter','As on','Target','Gap','Committed to','By'].map((h,i)=>h.padEnd(colWidths[i])).join(' ');
+  const plainSep = colWidths.map(w=>'-'.repeat(w)).join(' ');
+  const plainRows = rows.map(r => [r.label,r.current,r.target,r.gap,r.committed,r.by].map((v,i)=>String(v).padEnd(colWidths[i])).join(' ')).join('\n');
+  const plainBody = `Dear ${greeting},\n\nWe refer to the review meeting held on ${meetingDateTxt}. In the said meeting, you have committed to the parameters detailed below. You are advised to take necessary steps to honour the commitments made within the stipulated timeline.\n\n${plainHeader}\n${plainSep}\n${plainRows}\n\nKindly ensure the above commitments are honoured within the specified timeline, and keep this office informed of the progress made.\n\nRegards,\nRegional Office \u2014 Nagapattinam Region\nIndian Overseas Bank`;
+
+  const td = 'style="padding:8px 10px;border:1px solid #ccc;"';
+  const tdr = 'style="padding:8px 10px;border:1px solid #ccc;text-align:right;"';
+  const htmlRows = rows.map(r => `<tr><td ${td}>${r.label}</td><td ${tdr}>${r.current}</td><td ${tdr}>${r.target}</td><td ${tdr} style="padding:8px 10px;border:1px solid #ccc;text-align:right;color:${r.gapNeg?'#c0392b':'#222'};">${r.gap}</td><td ${td}>${r.committed}</td><td ${td}>${r.by}</td></tr>`).join('');
+  const htmlBody = `<p>Dear ${greeting},</p>
+<p>We refer to the review meeting held on ${meetingDateTxt}. In the said meeting, you have committed to the parameters detailed below. You are advised to take necessary steps to honour the commitments made within the stipulated timeline.</p>
+<table style="border-collapse:collapse;font-family:Arial,sans-serif;font-size:13px;width:100%;">
+<thead><tr style="background:#f2f2f2;"><th ${td}>Parameter</th><th ${tdr}>As on</th><th ${tdr}>Target</th><th ${tdr}>Gap</th><th ${td}>Committed to</th><th ${td}>By</th></tr></thead>
+<tbody>${htmlRows}</tbody></table>
+<p>Kindly ensure the above commitments are honoured within the specified timeline, and keep this office informed of the progress made.</p>
+<p>Regards,<br>Regional Office \u2014 Nagapattinam Region<br>Indian Overseas Bank</p>`;
+
+  return { to: staticB.email, subject: `Review Meeting Commitments \u2014 ${staticB.name} \u2014 ${meetingDateTxt}`, plainBody, htmlBody };
+}
+
+async function sendEmail(){
+  const parts = await buildEmailParts();
+  if(!parts){ alert('Set attendance, or make at least one commitment first.'); return; }
+  if(!confirm(`Send this email now to ${parts.to}?\n\nSubject: ${parts.subject}`)) return;
+  try{
+    await callBackend('sendCommitmentEmail', {to: parts.to, subject: parts.subject, plainBody: parts.plainBody, htmlBody: parts.htmlBody});
+    alert('Email sent to ' + parts.to);
+  }catch(e){
+    alert('Could not send email: ' + e.message);
+  }
+}
+async function buildAbsentWhatsAppText(){
+  const code = document.getElementById('branchSel').value;
+  const staticB = STATIC.find(x=>x.code==code);
+  const b = CURRENT[code];
+  const meetingDate = document.getElementById('meetingDate').value;
+  const meetingDateTxt = fmtDate(meetingDate);
+  const attendance = document.getElementById('attendance-type').value;
+  const isLeave = attendance === 'leave';
+  const reason = document.getElementById('attendance-remarks').value.trim();
+
+  let history = [];
+  try{ history = await callBackend('getCommitmentHistory', {branchCode: code, beforeDate: meetingDate}); }catch(e){ history = []; }
+
+  const flagLines = [];
+  if(history.length){
+    PARAMS.forEach(([key,label])=>{
+      const entries = history.map(h => h.data[key] ? {date:h.meetingDate, commit:h.data[key]} : null).filter(Boolean);
+      if(!entries.length) return;
+      entries.forEach(e=>{ e.honoured = wasHonoured(key, e.commit, b); });
+      let streak = 0;
+      for(const e of entries){ if(e.honoured===false) streak++; else break; }
+      if(streak>=2){
+        flagLines.push(`\u26a0 ${label}: not honoured for ${streak} consecutive reviews (last committed ${describeCommitmentType(entries[0].commit.type, entries[0].commit.val)} by ${fmtDate(entries[0].commit.date)})`);
+      } else if(streak===1){
+        flagLines.push(`\u26a0 ${label}: previous commitment (${fmtDate(entries[0].date)}) not yet honoured`);
+      }
+    });
+  }
+
+  const posLine = 'Present position \u2014 ' + PARAMS.map(([key,label])=>{
+    const d = b[key];
+    if(d.current===null) return null;
+    return `${label}: ${money(d.current)}/${money(d.target)} (${d.status})`;
+  }).filter(Boolean).join(', ') + '.';
+
+  const opener = isLeave
+    ? `Dear ${staticB.name} team, noted you were on approved leave for today's review (${meetingDateTxt}).`
+    : `Dear ${staticB.name} team, you were absent for today's scheduled review (${meetingDateTxt}).`;
+
+  const closer = (!isLeave || flagLines.length)
+    ? `Kindly ${!isLeave ? 'explain the absence and ' : ''}take corrective action on the pending commitment${flagLines.length>1?'s':''}.`
+    : `We will cover your commitments in the next review.`;
+
+  const parts = [opener];
+  if(reason) parts.push(`Note: ${reason}`);
+  if(flagLines.length) parts.push(flagLines.join('\n'));
+  parts.push(posLine);
+  parts.push(closer);
+  return parts.join('\n\n');
+}
+
+async function sendWhatsApp(){
+  const code = document.getElementById('branchSel').value;
+  if(!code){ alert('Select a branch first.'); return; }
+  const staticB = STATIC.find(x=>x.code==code);
+  if(!staticB.phone){ alert('No WhatsApp number on file for this branch.'); return; }
+  const attendance = document.getElementById('attendance-type').value;
+  let text;
+  if(attendance !== 'present'){
+    text = await buildAbsentWhatsAppText();
+  } else {
+    const r = currentMessage();
+    if(!r){ alert('Save commitments first.'); return; }
+    text = r.text;
+  }
+  window.open(`https://wa.me/91${staticB.phone}?text=${encodeURIComponent(text)}`, '_blank');
 }
 function sendSMS(){
   const r = currentMessage(); if(!r){ alert('Save commitments first.'); return; }
