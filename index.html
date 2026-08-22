@@ -130,7 +130,7 @@ td:first-child{font-family:'IBM Plex Sans',sans-serif;text-align:left;}
   <div class="masthead">
     <div>
       <h1>Branch Review Console</h1>
-      <div class="sub">Upload &middot; Analysis &middot; Review Meeting &middot; Review Report</div>
+      <div class="sub">Planning &middot; Advance &middot; Inspection &middot; Marketing</div>
     </div>
     <div style="text-align:right;">
       <div class="active-date" id="activeDateLabel">No data uploaded yet</div>
@@ -141,14 +141,16 @@ td:first-child{font-family:'IBM Plex Sans',sans-serif;text-align:left;}
   <div class="tabs">
     <div class="tab active" data-tab="home" onclick="switchTab('home')">Home</div>
     <div class="tab" data-tab="analysis" onclick="switchTab('analysis')">Analysis</div>
-    <div class="tab" data-tab="meeting" onclick="switchTab('meeting')">Review Meeting</div>
+    <div class="tab" data-tab="meeting" onclick="switchTab('meeting')">Planning Review</div>
+    <div class="tab" data-tab="advance-review" onclick="switchTab('advance-review')">Advance Review</div>
+    <div class="tab" data-tab="inspection-review" onclick="switchTab('inspection-review')">Inspection Review</div>
     <div class="tab" data-tab="report" onclick="switchTab('report')">Review Report</div>
   </div>
 
   <!-- HOME / UPLOAD -->
   <div class="panel active" id="panel-home">
     <div class="card">
-      <h2>Upload today's SB / CD / RTD workbook</h2>
+      <h2>Planning &mdash; upload today's SB / CD / RTD workbook</h2>
       <div class="upload-zone" id="dropZone">
         <p>Drop the daily Excel file here, or</p>
         <button onclick="document.getElementById('fileInput').click()">Choose file</button>
@@ -158,8 +160,41 @@ td:first-child{font-family:'IBM Plex Sans',sans-serif;text-align:left;}
       <div id="uploadStatus"></div>
     </div>
     <div class="card">
-      <h2>Previously uploaded days</h2>
+      <h2>Planning &mdash; previously uploaded days</h2>
       <div id="uploadedDatesList" class="hint">Loading&hellip;</div>
+    </div>
+
+    <div class="card">
+      <h2>Advance &mdash; upload workbook</h2>
+      <div class="upload-zone" id="dropZone-advance">
+        <p>Drop the Advance department's Excel file here, or</p>
+        <button onclick="document.getElementById('fileInput-advance').click()">Choose file</button>
+        <input type="file" id="fileInput-advance" accept=".xlsx,.xls" onchange="handleGenericUpload(event,'advance')">
+        <p class="hint2">Parameters for this department aren't defined yet &mdash; the file is captured and saved as-is, per branch, ready to wire up once the columns are specified.</p>
+      </div>
+      <div id="uploadStatus-advance"></div>
+    </div>
+
+    <div class="card">
+      <h2>Inspection &mdash; upload workbook</h2>
+      <div class="upload-zone" id="dropZone-inspection">
+        <p>Drop the Inspection department's Excel file here, or</p>
+        <button onclick="document.getElementById('fileInput-inspection').click()">Choose file</button>
+        <input type="file" id="fileInput-inspection" accept=".xlsx,.xls" onchange="handleGenericUpload(event,'inspection')">
+        <p class="hint2">Parameters for this department aren't defined yet &mdash; the file is captured and saved as-is, per branch, ready to wire up once the columns are specified.</p>
+      </div>
+      <div id="uploadStatus-inspection"></div>
+    </div>
+
+    <div class="card">
+      <h2>Marketing &mdash; upload workbook</h2>
+      <div class="upload-zone" id="dropZone-marketing">
+        <p>Drop the Marketing department's Excel file here, or</p>
+        <button onclick="document.getElementById('fileInput-marketing').click()">Choose file</button>
+        <input type="file" id="fileInput-marketing" accept=".xlsx,.xls" onchange="handleGenericUpload(event,'marketing')">
+        <p class="hint2">Parameters for this department aren't defined yet &mdash; the file is captured and saved as-is, per branch, ready to wire up once the columns are specified.</p>
+      </div>
+      <div id="uploadStatus-marketing"></div>
     </div>
   </div>
 
@@ -172,7 +207,7 @@ td:first-child{font-family:'IBM Plex Sans',sans-serif;text-align:left;}
     <div id="analysisContent"><div class="empty-hint">Upload a file on the Home page to see analysis.</div></div>
   </div>
 
-  <!-- REVIEW MEETING -->
+  <!-- PLANNING REVIEW -->
   <div class="panel" id="panel-meeting">
     <div class="top-row">
       <div class="field"><label>Branch</label><select id="branchSel" onchange="loadBranch()"></select></div>
@@ -181,10 +216,34 @@ td:first-child{font-family:'IBM Plex Sans',sans-serif;text-align:left;}
     <div id="meetingContent"><div class="empty-hint">Upload data on Home first, then select a branch here.</div></div>
   </div>
 
+  <!-- ADVANCE REVIEW (placeholder) -->
+  <div class="panel" id="panel-advance-review">
+    <div class="card">
+      <h2>Advance Review</h2>
+      <p style="font-size:13.5px;color:var(--text-dim);line-height:1.6;">Advance department parameters (which figures to review, targets, commitment types) haven't been defined yet. Once specified, this tab will work the same way Planning Review does &mdash; current position, commitment capture, honour-by dates, and email/WhatsApp follow-up.</p>
+      <p style="font-size:13px;color:var(--text-faint);">Uploaded Advance data so far: <span id="advanceUploadedDates">checking&hellip;</span></p>
+    </div>
+  </div>
+
+  <!-- INSPECTION REVIEW (placeholder) -->
+  <div class="panel" id="panel-inspection-review">
+    <div class="card">
+      <h2>Inspection Review</h2>
+      <p style="font-size:13.5px;color:var(--text-dim);line-height:1.6;">Inspection department parameters haven't been defined yet. Once specified, this tab will work the same way Planning Review does.</p>
+      <p style="font-size:13px;color:var(--text-faint);">Uploaded Inspection data so far: <span id="inspectionUploadedDates">checking&hellip;</span></p>
+    </div>
+  </div>
+
   <!-- REVIEW REPORT -->
   <div class="panel" id="panel-report">
     <div class="top-row">
-      <div class="field"><label>Meeting</label><select id="reportMeetingSel" onchange="renderReport()"></select></div>
+      <div class="field"><label>Department</label><select id="reportDeptSel" onchange="onReportDeptChange()">
+        <option value="planning">Planning</option>
+        <option value="advance">Advance</option>
+        <option value="inspection">Inspection</option>
+        <option value="marketing">Marketing</option>
+      </select></div>
+      <div class="field" id="reportMeetingField"><label>Meeting</label><select id="reportMeetingSel" onchange="renderReport()"></select></div>
     </div>
     <div id="reportContent"><div class="empty-hint">Loading saved meetings&hellip;</div></div>
   </div>
@@ -251,13 +310,69 @@ function fmtDate(iso){ return new Date(iso+'T00:00:00').toLocaleDateString('en-I
 
 async function switchTab(name){
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
-  ['home','analysis','meeting','report'].forEach(n => document.getElementById('panel-'+n).classList.toggle('active', n===name));
+  ['home','analysis','meeting','advance-review','inspection-review','report'].forEach(n => document.getElementById('panel-'+n).classList.toggle('active', n===name));
   if(name === 'home') refreshUploadedDatesList();
   if(name === 'analysis'){ await populateAnalysisDates(); renderAnalysis(); }
   if(name === 'report'){ await populateReportMeetings(); renderReport(); }
+  if(name === 'advance-review') refreshGenericUploadedDates('advance', 'advanceUploadedDates');
+  if(name === 'inspection-review') refreshGenericUploadedDates('inspection', 'inspectionUploadedDates');
 }
 
-// ---------- PARSE + STORE DAILY UPLOAD ----------
+async function refreshGenericUploadedDates(dept, elId){
+  let dates = [];
+  try{ dates = await callBackend('listGenericSnapshotDates', {dept}); }catch(e){ dates = []; }
+  document.getElementById(elId).textContent = dates.length ? dates.map(fmtPeriod).join(', ') : 'none yet';
+}
+
+// ---------- GENERIC UPLOAD (Advance / Inspection / Marketing) ----------
+function parseGenericWorkbook(arrayBuffer){
+  const wb = XLSX.read(arrayBuffer, {type:'array'});
+  const sheet = wb.Sheets[wb.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(sheet, {header:1, raw:true});
+  let headerIdx = -1, headerRow = null;
+  for(let i=0;i<rows.length;i++){
+    if(rows[i] && rows[i].some(c => typeof c === 'string' && /branch\s*code/i.test(c))){ headerIdx = i; headerRow = rows[i]; break; }
+  }
+  if(headerIdx === -1) throw new Error('Could not find a column header containing "Branch Code" — is this the right file?');
+  const cCode = headerRow.findIndex(c => typeof c === 'string' && /branch\s*code/i.test(c));
+  const cPeriod = headerRow.findIndex(c => typeof c === 'string' && /period|^date$|as on/i.test(c));
+  const data = {}; let period = null; let matched = 0;
+  for(let i=headerIdx+1;i<rows.length;i++){
+    const r = rows[i];
+    if(!r || r[cCode]===undefined || r[cCode]===null || r[cCode]==='') continue;
+    const code = parseInt(r[cCode]);
+    if(isNaN(code)) continue;
+    if(cPeriod !== -1 && r[cPeriod]) period = r[cPeriod];
+    const rowObj = {};
+    headerRow.forEach((h,idx)=>{ if(h) rowObj[h] = r[idx]; });
+    data[code] = rowObj;
+    matched++;
+  }
+  if(!period) period = new Date().toISOString().slice(0,10).replace(/-/g,'');
+  return { period: String(period), data, matched };
+}
+
+async function handleGenericUpload(evt, dept){
+  const file = evt.target.files[0];
+  if(!file) return;
+  const statusEl = document.getElementById('uploadStatus-'+dept);
+  statusEl.className = ''; statusEl.textContent = 'Reading file\u2026';
+  try{
+    const buf = await file.arrayBuffer();
+    const {period, data, matched} = parseGenericWorkbook(buf);
+    const knownMatched = Object.keys(data).map(Number).filter(c => STATIC.some(b=>b.code===c)).length;
+    statusEl.textContent = 'Saving\u2026';
+    await callBackend('saveGenericSnapshot', {dept, period, data, enteredBy: localStorage.getItem('rc_name')});
+    statusEl.className = 'ok';
+    statusEl.innerHTML = `Parsed ${matched} branch rows for ${fmtPeriod(period)}, saved. ${knownMatched} of ${matched} branch codes matched your known branch list.<br><span style="color:var(--text-faint);">Raw columns captured as-is &mdash; no target/gap logic yet, since this department's parameters aren't defined.</span>`;
+  }catch(e){
+    statusEl.className = 'err';
+    statusEl.textContent = 'Could not save this file: ' + e.message;
+  }
+  evt.target.value = '';
+}
+
+// ---------- PARSE + STORE DAILY UPLOAD (Planning) ----------
 function parseWorkbook(arrayBuffer){
   const wb = XLSX.read(arrayBuffer, {type:'array'});
   const sheet = wb.Sheets[wb.SheetNames[0]];
@@ -690,17 +805,15 @@ function wasHonoured(param, commit, curB){
   return null;
 }
 
-async function buildEmailParts(){
-  const code = document.getElementById('branchSel').value;
+async function buildEmailParts(code, meetingDate, commitData){
   const staticB = STATIC.find(x=>x.code==code);
   const b = CURRENT[code];
-  const meetingDate = document.getElementById('meetingDate').value;
   const meetingDateTxt = fmtDate(meetingDate);
-  const attendance = document.getElementById('attendance-type').value;
+  const attendance = commitData.attendance || 'present';
   const greeting = staticB.manager_name || 'Branch Manager';
 
   if(attendance !== 'present'){
-    const reason = document.getElementById('attendance-remarks').value.trim();
+    const reason = commitData.attendanceRemarks || '';
     const isLeave = attendance === 'leave';
 
     // Present position table (same figures as the balance rows)
@@ -786,23 +899,20 @@ ${askHtml}
 
   const rows = [];
   PARAMS.forEach(([key,label])=>{
-    const type = document.getElementById(key+'-type').value;
-    if(!type) return;
+    const commit = commitData[key];
+    if(!commit || !commit.type) return;
     const d = b[key];
-    let committed = TYPE_LABEL[type];
-    if(type==='custom'){
-      const val = document.getElementById(key+'-custom').value;
-      committed = val ? `Custom (${val})` : 'Custom (not entered)';
+    let committed = TYPE_LABEL[commit.type];
+    if(commit.type==='custom'){
+      committed = commit.val ? `Custom (${commit.val})` : 'Custom (not entered)';
     }
-    const dateVal = document.getElementById(key+'-date').value;
-    rows.push({ label, current: money(d.current), target: money(d.target), gap: money(d.gap), gapNeg: d.gap<0, committed, by: fmtDate(dateVal) });
+    rows.push({ label, current: money(d.current), target: money(d.target), gap: money(d.gap), gapNeg: d.gap<0, committed, by: fmtDate(commit.date) });
   });
   ['sbrr','cdccrr'].forEach(key=>{
-    const targetEl = document.getElementById(key+'-target');
-    if(!targetEl || !targetEl.value) return;
+    const commit = commitData[key];
+    if(!commit || !commit.target) return;
     const label = key==='sbrr' ? 'SB run rate' : 'CDCC run rate';
-    const dateVal = document.getElementById(key+'-date').value;
-    rows.push({ label, current: '\u2014', target: targetEl.value, gap: '\u2014', gapNeg:false, committed: `Rate ${targetEl.value}`, by: fmtDate(dateVal) });
+    rows.push({ label, current: '\u2014', target: commit.target, gap: '\u2014', gapNeg:false, committed: `Rate ${commit.target}`, by: fmtDate(commit.date) });
   });
   if(!rows.length) return null;
 
@@ -826,8 +936,31 @@ ${askHtml}
   return { to: staticB.email, subject: `Review Meeting Commitments \u2014 ${staticB.name} \u2014 ${meetingDateTxt}`, plainBody, htmlBody };
 }
 
+function collectCurrentFormData(){
+  const attendance = document.getElementById('attendance-type').value;
+  if(attendance !== 'present'){
+    return { attendance, attendanceRemarks: document.getElementById('attendance-remarks').value.trim() || undefined };
+  }
+  const data = { attendance: 'present' };
+  PARAMS.forEach(([key])=>{
+    const type = document.getElementById(key+'-type').value;
+    if(!type) return;
+    data[key] = { type, val: type==='custom' ? document.getElementById(key+'-custom').value : undefined,
+      date: document.getElementById(key+'-date').value, remarks: document.getElementById(key+'-remarks').value.trim() || undefined };
+  });
+  ['sbrr','cdccrr'].forEach(key=>{
+    const targetEl = document.getElementById(key+'-target');
+    if(!targetEl || !targetEl.value) return;
+    data[key] = { cur: document.getElementById(key+'-cur').value, target: targetEl.value,
+      date: document.getElementById(key+'-date').value, remarks: document.getElementById(key+'-remarks').value.trim() || undefined };
+  });
+  return data;
+}
+
 async function sendEmail(){
-  const parts = await buildEmailParts();
+  const code = document.getElementById('branchSel').value;
+  const meetingDate = document.getElementById('meetingDate').value;
+  const parts = await buildEmailParts(code, meetingDate, collectCurrentFormData());
   if(!parts){ alert('Set attendance, or make at least one commitment first.'); return; }
   if(!confirm(`Send this email now to ${parts.to}?\n\nSubject: ${parts.subject}`)) return;
   try{
@@ -942,10 +1075,34 @@ function craftWhatsAppUpdate(staticB, curB, meetingCommits){
   const closer = anyNegative ? "Kindly update on the action plan to close the gap at the earliest." : "Keep up the momentum — thank you for the good work.";
   return `${opener}\n${lines.join('\n')}\n${closer}`;
 }
+async function onReportDeptChange(){
+  const dept = document.getElementById('reportDeptSel').value;
+  const meetingField = document.getElementById('reportMeetingField');
+  if(dept === 'planning'){
+    meetingField.style.display = '';
+    await populateReportMeetings();
+    renderReport();
+  } else {
+    meetingField.style.display = 'none';
+    renderGenericReport(dept);
+  }
+}
+async function renderGenericReport(dept){
+  const content = document.getElementById('reportContent');
+  content.innerHTML = '<div class="empty-hint">Loading…</div>';
+  let dates = [];
+  try{ dates = await callBackend('listGenericSnapshotDates', {dept}); }catch(e){ dates = []; }
+  const label = dept.charAt(0).toUpperCase()+dept.slice(1);
+  content.innerHTML = `<div class="card">
+    <h2>${label}</h2>
+    <p style="font-size:13.5px;color:var(--text-dim);line-height:1.6;">No commitment tracking yet for ${label} &mdash; parameters haven't been defined, so there's no review meeting to report on.</p>
+    <p style="font-size:13px;color:var(--text-faint);">Uploaded snapshot dates: ${dates.length ? dates.map(fmtPeriod).join(', ') : 'none yet'}</p>
+  </div>`;
+}
 async function renderReport(){
   const content = document.getElementById('reportContent');
   const meetingId = document.getElementById('reportMeetingSel').value;
-  if(!meetingId){ content.innerHTML = '<div class="empty-hint">No saved review meetings yet — go to Review Meeting, save some commitments, then check back here.</div>'; return; }
+  if(!meetingId){ content.innerHTML = '<div class="empty-hint">No saved review meetings yet — go to Planning Review, save some commitments, then check back here.</div>'; return; }
   content.innerHTML = '<div class="empty-hint">Loading…</div>';
   let allCommits = {};
   try{ allCommits = await callBackend('listCommitmentsForMeeting', {meetingDate: meetingId}); }catch(e){ allCommits = {}; }
@@ -961,6 +1118,7 @@ async function renderReport(){
       cards.push(`<div class="branch-card">
         <div class="branch-head"><span class="name">${staticB.name} (${staticB.code})</span>
         <span class="entered-by">${mc.enteredBy ? 'entered by '+mc.enteredBy : ''}</span>
+        <button onclick='sendReportEmail(${code}, "${meetingId}", ${JSON.stringify(JSON.stringify(mc))})'>\u2709 Email</button>
         <button onclick='sendReportWA(${code}, ${JSON.stringify(JSON.stringify(mc))})' ${staticB.phone ? '' : 'disabled'}>\u2726 WhatsApp update</button></div>
         <p style="font-size:13px;margin:0;"><span class="badge NEGATIVE" style="background:var(--surface-3);color:var(--text-faint);">${label}</span>${mc.attendanceRemarks ? ' — '+mc.attendanceRemarks : ''}</p>
       </div>`);
@@ -978,6 +1136,7 @@ async function renderReport(){
     cards.push(`<div class="branch-card">
       <div class="branch-head"><span class="name">${staticB.name} (${staticB.code})</span>
       <span class="entered-by">${mc.enteredBy ? 'entered by '+mc.enteredBy : ''}</span>
+      <button onclick='sendReportEmail(${code}, "${meetingId}", ${JSON.stringify(JSON.stringify(mc))})'>\u2709 Email</button>
       <button onclick='sendReportWA(${code}, ${JSON.stringify(JSON.stringify(mc))})' ${staticB.phone ? '' : 'disabled'}>✦ WhatsApp update</button></div>
       <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;"><table><thead><tr><th>Parameter</th><th>Committed</th><th>By</th><th>Current</th><th>Gap</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table></div>
     </div>`);
@@ -991,6 +1150,18 @@ function sendReportWA(code, mcJsonString){
   if(!staticB.phone){ alert('No WhatsApp number on file for this branch.'); return; }
   window.open(`https://wa.me/91${staticB.phone}?text=${encodeURIComponent(craftWhatsAppUpdate(staticB, curB, mc))}`, '_blank');
 }
+async function sendReportEmail(code, meetingId, mcJsonString){
+  const mc = JSON.parse(mcJsonString);
+  const parts = await buildEmailParts(code, meetingId, mc);
+  if(!parts){ alert('No commitment data to send for this branch.'); return; }
+  if(!confirm(`Send this email now to ${parts.to}?\n\nSubject: ${parts.subject}`)) return;
+  try{
+    await callBackend('sendCommitmentEmail', {to: parts.to, subject: parts.subject, plainBody: parts.plainBody, htmlBody: parts.htmlBody});
+    alert('Email sent to ' + parts.to);
+  }catch(e){
+    alert('Could not send email: ' + e.message);
+  }
+}
 
 // ---------- INIT ----------
 function initApp(){
@@ -1001,6 +1172,16 @@ function initApp(){
   dropZone.addEventListener('drop', e => {
     const file = e.dataTransfer.files[0];
     if(file) handleFileUpload({target:{files:[file], value:''}});
+  });
+  ['advance','inspection','marketing'].forEach(dept => {
+    const dz = document.getElementById('dropZone-'+dept);
+    ['dragover','dragleave','drop'].forEach(evt => {
+      dz.addEventListener(evt, e => { e.preventDefault(); dz.classList.toggle('drag', evt==='dragover'); });
+    });
+    dz.addEventListener('drop', e => {
+      const file = e.dataTransfer.files[0];
+      if(file) handleGenericUpload({target:{files:[file], value:''}}, dept);
+    });
   });
   populateBranchSelect();
   refreshUploadedDatesList();
