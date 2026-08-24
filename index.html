@@ -590,6 +590,7 @@ async function loadBranch(){
 
   html += renderRateCard('sbrr', 'SB run rate', 'accts / working day', ACTIVE_DATE, saved && saved.sbrr);
   html += renderRateCard('cdccrr', 'CDCC run rate', 'accts / month', ACTIVE_DATE, saved && saved.cdccrr);
+  html += renderAccountOpeningCard(saved && saved.accountOpening);
   html += '</div>';
 
   const phoneLine = staticB.phone ? `${staticB.manager_name || ''} \u2014 ${staticB.phone}` : 'no contact number on file';
@@ -602,8 +603,7 @@ async function loadBranch(){
       <p id="previewText">${saved ? 'Loaded from saved data — click Save to refresh after changes.' : 'Set at least one commitment and click Save to build the message.'}</p>
       <div class="contact-hint">Branch manager contact: ${phoneLine} &middot; ${staticB.email}</div>
       <div class="btn-row" style="margin-top:12px;">
-        <button id="btnEmail" class="ghost" onclick="sendEmail()">\u2709 Send now</button>
-        <button id="btnEmailClient" class="ghost" onclick="openInMailClient()">\ud83d\udce7 Open in email app</button>
+        <button id="btnEmail" class="ghost" onclick="openInMailClient()">\u2709 Email</button>
         <button id="btnWA" class="ghost" onclick="sendWhatsApp()" ${staticB.phone ? '' : 'disabled'}>✦ WhatsApp</button>
         <button id="btnSMS" class="ghost" onclick="sendSMS()" ${staticB.phone ? '' : 'disabled'}>☎ SMS</button>
       </div>
@@ -699,6 +699,73 @@ function workingDaysBetween(start,end){ let d=new Date(start),c=0; while(d<end){
 function monthsBetween(start,end){ return Math.max(0.1,(end-start)/(1000*60*60*24*30.44)); }
 function periodToDate(period){ return new Date(parseInt(period.slice(0,4)), parseInt(period.slice(4,6))-1, parseInt(period.slice(6,8))); }
 
+const ACCOUNT_OPENING_SCHEMES = [
+  { group: 'SB Accounts', items: [
+    ['sb_uhni', 'SB UHNI'],
+    ['sb_prime', 'SB PRIME'],
+    ['sb_priority', 'SB PRIORITY'],
+    ['sb_privilege', 'SB PRIVILEGE'],
+  ]},
+  { group: 'CDCC Accounts', items: [
+    ['cd_gold', 'CD GOLD'],
+    ['cd_diamond', 'CD DIAMOND'],
+    ['cd_platinum', 'CD PLATINUM'],
+  ]},
+];
+
+function renderAccountOpeningCard(saved){
+  const s = saved || {};
+  let rowsHtml = '';
+  ACCOUNT_OPENING_SCHEMES.forEach(section => {
+    rowsHtml += `<tr><td colspan="4" style="font-family:'IBM Plex Sans',sans-serif;font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:0.4px;color:var(--gold);background:var(--surface-2);text-align:left;">${section.group}</td></tr>`;
+    section.items.forEach(([key,label])=>{
+      const row = s[key] || {};
+      rowsHtml += `<tr>
+        <td class="lbl" style="padding-left:18px;">${label}</td>
+        <td><input type="number" step="1" min="0" id="ao-${key}-funded" value="${row.funded??''}" placeholder="0" style="width:80px;text-align:right;" oninput="calcAONet('${key}')"></td>
+        <td><input type="number" step="1" min="0" id="ao-${key}-closed" value="${row.closed??''}" placeholder="0" style="width:80px;text-align:right;" oninput="calcAONet('${key}')"></td>
+        <td id="ao-${key}-net" style="text-align:right;font-family:'IBM Plex Mono',monospace;">${row.funded!=null && row.closed!=null ? (row.funded-row.closed) : '\u2014'}</td>
+      </tr>`;
+    });
+  });
+  return `
+    <div class="param-card">
+      <h3>Account Opening Performance</h3>
+      <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+      <table>
+        <thead><tr><th style="text-align:left;">Scheme</th><th>Funded</th><th>Closed</th><th>Net A/cs</th></tr></thead>
+        <tbody>${rowsHtml}</tbody>
+      </table>
+      </div>
+    </div>`;
+}
+
+function calcAONet(key){
+  const f = parseInt(document.getElementById('ao-'+key+'-funded').value);
+  const c = parseInt(document.getElementById('ao-'+key+'-closed').value);
+  const el = document.getElementById('ao-'+key+'-net');
+  el.textContent = (!isNaN(f) && !isNaN(c)) ? (f-c) : '\u2014';
+}
+
+function collectAccountOpeningData(){
+  const data = {};
+  let any = false;
+  ACCOUNT_OPENING_SCHEMES.forEach(section => {
+    section.items.forEach(([key])=>{
+      const fEl = document.getElementById('ao-'+key+'-funded');
+      const cEl = document.getElementById('ao-'+key+'-closed');
+      if(!fEl) return;
+      const funded = fEl.value === '' ? null : parseInt(fEl.value);
+      const closed = cEl.value === '' ? null : parseInt(cEl.value);
+      if(funded !== null || closed !== null){
+        data[key] = { funded, closed };
+        any = true;
+      }
+    });
+  });
+  return any ? data : undefined;
+}
+
 function renderRateCard(key, label, unitLabel, activeDate, saved){
   const s = saved || {};
   const todayLabel = activeDate ? fmtPeriod(activeDate) : '—';
@@ -776,6 +843,8 @@ async function saveCommitments(){
       date: document.getElementById(key+'-date').value,
       remarks: document.getElementById(key+'-remarks').value.trim() || undefined };
   });
+  const aoData = collectAccountOpeningData();
+  if(aoData) data.accountOpening = aoData;
   const statusEl = document.getElementById('saveStatus');
   statusEl.textContent = 'Saving…';
   try{
@@ -1126,8 +1195,7 @@ async function renderReport(){
       cards.push(`<div class="branch-card">
         <div class="branch-head"><span class="name">${staticB.name} (${staticB.code})</span>
         <span class="entered-by">${mc.enteredBy ? 'entered by '+mc.enteredBy : ''}</span>
-        <button onclick='sendReportEmail(${code}, "${meetingId}", ${JSON.stringify(JSON.stringify(mc))})'>\u2709 Send now</button>
-        <button onclick='openReportMailClient(${code}, "${meetingId}", ${JSON.stringify(JSON.stringify(mc))})'>\ud83d\udce7 Open in email app</button>
+        <button onclick='openReportMailClient(${code}, "${meetingId}", ${JSON.stringify(JSON.stringify(mc))})'>\u2709 Email</button>
         <button onclick='sendReportWA(${code}, ${JSON.stringify(JSON.stringify(mc))})' ${staticB.phone ? '' : 'disabled'}>\u2726 WhatsApp update</button></div>
         <p style="font-size:13px;margin:0;"><span class="badge NEGATIVE" style="background:var(--surface-3);color:var(--text-faint);">${label}</span>${mc.attendanceRemarks ? ' — '+mc.attendanceRemarks : ''}</p>
       </div>`);
@@ -1145,8 +1213,7 @@ async function renderReport(){
     cards.push(`<div class="branch-card">
       <div class="branch-head"><span class="name">${staticB.name} (${staticB.code})</span>
       <span class="entered-by">${mc.enteredBy ? 'entered by '+mc.enteredBy : ''}</span>
-      <button onclick='sendReportEmail(${code}, "${meetingId}", ${JSON.stringify(JSON.stringify(mc))})'>\u2709 Send now</button>
-      <button onclick='openReportMailClient(${code}, "${meetingId}", ${JSON.stringify(JSON.stringify(mc))})'>\ud83d\udce7 Open in email app</button>
+      <button onclick='openReportMailClient(${code}, "${meetingId}", ${JSON.stringify(JSON.stringify(mc))})'>\u2709 Email</button>
       <button onclick='sendReportWA(${code}, ${JSON.stringify(JSON.stringify(mc))})' ${staticB.phone ? '' : 'disabled'}>✦ WhatsApp update</button></div>
       <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;"><table><thead><tr><th>Parameter</th><th>Committed</th><th>By</th><th>Current</th><th>Gap</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table></div>
     </div>`);
