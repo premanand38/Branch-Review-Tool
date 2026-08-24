@@ -699,42 +699,55 @@ function workingDaysBetween(start,end){ let d=new Date(start),c=0; while(d<end){
 function monthsBetween(start,end){ return Math.max(0.1,(end-start)/(1000*60*60*24*30.44)); }
 function periodToDate(period){ return new Date(parseInt(period.slice(0,4)), parseInt(period.slice(4,6))-1, parseInt(period.slice(6,8))); }
 
-const ACCOUNT_OPENING_SCHEMES = [
-  { group: 'SB Accounts', items: [
-    ['sb_uhni', 'SB UHNI'],
-    ['sb_prime', 'SB PRIME'],
-    ['sb_priority', 'SB PRIORITY'],
-    ['sb_privilege', 'SB PRIVILEGE'],
-  ]},
-  { group: 'CDCC Accounts', items: [
-    ['cd_gold', 'CD GOLD'],
-    ['cd_diamond', 'CD DIAMOND'],
-    ['cd_platinum', 'CD PLATINUM'],
-  ]},
+const SB_ACCOUNT_SCHEMES = [
+  ['sb_prime', 'SB PRIME'],
+  ['sb_priority', 'SB PRIORITY'],
+  ['sb_privilege', 'SB PRIVILEGE'],
+];
+const CDCC_ACCOUNT_SCHEMES = [
+  ['cd_gold', 'CD GOLD'],
+  ['cd_diamond', 'CD DIAMOND'],
+  ['cd_platinum', 'CD PLATINUM'],
 ];
 
 function renderAccountOpeningCard(saved){
   const s = saved || {};
-  let rowsHtml = '';
-  ACCOUNT_OPENING_SCHEMES.forEach(section => {
-    rowsHtml += `<tr><td colspan="4" style="font-family:'IBM Plex Sans',sans-serif;font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:0.4px;color:var(--gold);background:var(--surface-2);text-align:left;">${section.group}</td></tr>`;
-    section.items.forEach(([key,label])=>{
-      const row = s[key] || {};
-      rowsHtml += `<tr>
-        <td class="lbl" style="padding-left:18px;">${label}</td>
-        <td><input type="number" step="1" min="0" id="ao-${key}-funded" value="${row.funded??''}" placeholder="0" style="width:80px;text-align:right;" oninput="calcAONet('${key}')"></td>
-        <td><input type="number" step="1" min="0" id="ao-${key}-closed" value="${row.closed??''}" placeholder="0" style="width:80px;text-align:right;" oninput="calcAONet('${key}')"></td>
-        <td id="ao-${key}-net" style="text-align:right;font-family:'IBM Plex Mono',monospace;">${row.funded!=null && row.closed!=null ? (row.funded-row.closed) : '\u2014'}</td>
-      </tr>`;
-    });
-  });
+
+  const sbRows = SB_ACCOUNT_SCHEMES.map(([key,label])=>{
+    const row = s[key] || {};
+    return `<tr>
+      <td class="lbl">${label}</td>
+      <td><input type="number" step="1" min="0" id="ao-${key}-committed" value="${row.committed??''}" placeholder="0" style="width:90px;text-align:right;"></td>
+      <td><input type="date" id="ao-${key}-date" value="${row.date||'2026-08-24'}" style="width:150px;"></td>
+    </tr>`;
+  }).join('');
+
+  const cdRows = CDCC_ACCOUNT_SCHEMES.map(([key,label])=>{
+    const row = s[key] || {};
+    return `<tr>
+      <td class="lbl">${label}</td>
+      <td><input type="number" step="1" min="0" id="ao-${key}-funded" value="${row.funded??''}" placeholder="0" style="width:80px;text-align:right;" oninput="calcAONet('${key}')"></td>
+      <td><input type="number" step="1" min="0" id="ao-${key}-closed" value="${row.closed??''}" placeholder="0" style="width:80px;text-align:right;" oninput="calcAONet('${key}')"></td>
+      <td id="ao-${key}-net" style="text-align:right;font-family:'IBM Plex Mono',monospace;">${row.funded!=null && row.closed!=null ? (row.funded-row.closed) : '\u2014'}</td>
+    </tr>`;
+  }).join('');
+
   return `
     <div class="param-card">
-      <h3>Account Opening Performance</h3>
+      <h3>SB Account Opening Commitments</h3>
+      <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+      <table>
+        <thead><tr><th style="text-align:left;">Scheme</th><th>Committed to open</th><th style="text-align:left;">By which date</th></tr></thead>
+        <tbody>${sbRows}</tbody>
+      </table>
+      </div>
+    </div>
+    <div class="param-card">
+      <h3>CDCC Accounts</h3>
       <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
       <table>
         <thead><tr><th style="text-align:left;">Scheme</th><th>Funded</th><th>Closed</th><th>Net A/cs</th></tr></thead>
-        <tbody>${rowsHtml}</tbody>
+        <tbody>${cdRows}</tbody>
       </table>
       </div>
     </div>`;
@@ -750,18 +763,25 @@ function calcAONet(key){
 function collectAccountOpeningData(){
   const data = {};
   let any = false;
-  ACCOUNT_OPENING_SCHEMES.forEach(section => {
-    section.items.forEach(([key])=>{
-      const fEl = document.getElementById('ao-'+key+'-funded');
-      const cEl = document.getElementById('ao-'+key+'-closed');
-      if(!fEl) return;
-      const funded = fEl.value === '' ? null : parseInt(fEl.value);
-      const closed = cEl.value === '' ? null : parseInt(cEl.value);
-      if(funded !== null || closed !== null){
-        data[key] = { funded, closed };
-        any = true;
-      }
-    });
+  SB_ACCOUNT_SCHEMES.forEach(([key])=>{
+    const cEl = document.getElementById('ao-'+key+'-committed');
+    if(!cEl) return;
+    const committed = cEl.value === '' ? null : parseInt(cEl.value);
+    if(committed !== null){
+      data[key] = { committed, date: document.getElementById('ao-'+key+'-date').value };
+      any = true;
+    }
+  });
+  CDCC_ACCOUNT_SCHEMES.forEach(([key])=>{
+    const fEl = document.getElementById('ao-'+key+'-funded');
+    const cEl = document.getElementById('ao-'+key+'-closed');
+    if(!fEl) return;
+    const funded = fEl.value === '' ? null : parseInt(fEl.value);
+    const closed = cEl.value === '' ? null : parseInt(cEl.value);
+    if(funded !== null || closed !== null){
+      data[key] = { funded, closed };
+      any = true;
+    }
   });
   return any ? data : undefined;
 }
